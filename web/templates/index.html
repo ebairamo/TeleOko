@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeleOko - Система видеонаблюдения</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <h1>TeleOko</h1>
+        </div>
+        <div class="system-info">
+            <span>IP: {{.ip}}</span>
+            <span class="connection-status online">Подключено</span>
+        </div>
+    </header>
+
+    <main>
+        <div class="sidebar">
+            <div class="camera-controls">
+                <h2>Камеры</h2>
+                <select id="cameraSelect">
+                    <option value="1">Общий план</option>
+                    <option value="101">Камера 1</option>
+                    <option value="102">Камера 2</option>
+                    <option value="102">Камера 3</option>
+                    <option value="102">Камера 4</option>
+                    <option value="102">Камера 5</option>
+                    <option value="102">Камера 6</option>
+                    <option value="102">Камера 7</option>
+                    <option value="102">Камера 8</option>
+                    <option value="102">Камера 9</option>
+                    <option value="102">Камера 10</option>
+                    <option value="102">Камера 11</option>
+                    <option value="102">Камера 12</option>
+                    <option value="102">Камера 13</option>
+                    <option value="102">Камера 14</option>
+                    <option value="102">Камера 15</option>
+                    <option value="102">Камера 16</option>
+
+                </select>
+                <div class="buttons">
+                    <button id="liveBtn" class="primary-btn">Прямой эфир</button>
+                    <button id="snapshotBtn" class="secondary-btn">Снимок</button>
+                </div>
+            </div>
+
+            <div class="archive-controls">
+                <h2>Архив</h2>
+                <div class="date-picker">
+                    <label for="archiveDate">Дата:</label>
+                    <input type="date" id="archiveDate">
+                </div>
+                <button id="searchBtn" class="primary-btn">Поиск записей</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="video-container">
+                <div class="placeholder">
+                    <span class="placeholder-icon">▶</span>
+                    <p>Выберите камеру и нажмите "Прямой эфир"</p>
+                </div>
+            </div>
+
+            <div class="timeline-container">
+                <h3>Временная шкала</h3>
+                <div id="timeline" class="timeline">
+                    <div class="timeline-empty">Выберите дату и нажмите "Поиск записей"</div>
+                </div>
+            </div>
+
+            <div class="recordings-container">
+                <h3>Список записей</h3>
+                <div id="recordingsList" class="recordings-list">
+                    <div class="recordings-empty">Выберите дату и нажмите "Поиск записей"</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="snapshotModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Снимок с камеры</h2>
+            <div class="snapshot-container">
+                <img id="snapshotImage" src="" alt="Снимок с камеры">
+            </div>
+            <div class="modal-buttons">
+                <button id="downloadBtn" class="primary-btn">Скачать</button>
+                <button id="closeSnapshotBtn" class="secondary-btn">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loadingMessage">Загрузка...</p>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 TeleOko - Система видеонаблюдения</p>
+        <p>Версия 1.0.0</p>
+    </footer>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

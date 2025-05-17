@@ -1,0 +1,508 @@
+/* Сброс стилей и основные настройки */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f5f7fa;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+button {
+    cursor: pointer;
+}
+
+h1, h2, h3, h4 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+/* Хедер */
+header {
+    background-color: #2c3e50;
+    color: #ecf0f1;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.logo h1 {
+    color: #ecf0f1;
+    font-size: 24px;
+    margin: 0;
+}
+
+.system-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 14px;
+}
+
+.connection-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.connection-status::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.connection-status.online {
+    background-color: rgba(46, 204, 113, 0.2);
+    color: #27ae60;
+}
+
+.connection-status.online::before {
+    background-color: #2ecc71;
+}
+
+.connection-status.offline {
+    background-color: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+}
+
+.connection-status.offline::before {
+    background-color: #e74c3c;
+}
+
+/* Основной контент */
+main {
+    display: flex;
+    flex: 1;
+    padding: 20px;
+    gap: 20px;
+}
+
+/* Боковая панель */
+.sidebar {
+    width: 300px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.camera-controls, .archive-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+select, input[type="date"] {
+    width: 100%;
+    padding: 12px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #f9f9f9;
+    font-size: 14px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+select:focus, input[type="date"]:focus {
+    border-color: #3498db;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.primary-btn, .secondary-btn {
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background-color 0.3s, transform 0.1s;
+    border: none;
+    flex: 1;
+    text-align: center;
+}
+
+.primary-btn {
+    background-color: #3498db;
+    color: white;
+}
+
+.primary-btn:hover {
+    background-color: #2980b9;
+}
+
+.primary-btn:active {
+    transform: translateY(1px);
+}
+
+.secondary-btn {
+    background-color: #ecf0f1;
+    color: #7f8c8d;
+    border: 1px solid #ddd;
+}
+
+.secondary-btn:hover {
+    background-color: #dfe6e9;
+}
+
+.secondary-btn:active {
+    transform: translateY(1px);
+}
+
+.date-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.date-picker label {
+    font-size: 14px;
+    color: #7f8c8d;
+}
+
+/* Основной контент */
+.content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Контейнер для видео */
+#video-container {
+    width: 100%;
+    height: 500px;
+    background-color: #1e272e;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+#video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #a4b0be;
+    text-align: center;
+    padding: 20px;
+}
+
+.placeholder-icon {
+    font-size: 50px;
+    margin-bottom: 20px;
+    color: #487eb0;
+}
+
+/* Временная шкала */
+.timeline-container, .recordings-container {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.timeline {
+    position: relative;
+    height: 60px;
+    background-color: #f1f2f6;
+    border-radius: 4px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.timeline-empty, .recordings-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #a4b0be;
+    font-size: 14px;
+}
+
+.timeline-container h3, .recordings-container h3 {
+    margin-bottom: 15px;
+    font-size: 16px;
+    color: #34495e;
+}
+
+.time-label {
+    position: absolute;
+    top: -18px;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #7f8c8d;
+}
+
+.timeline-segment {
+    position: absolute;
+    height: 20px;
+    top: 20px;
+    background-color: #3498db;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background-color 0.2s;
+}
+
+.timeline-segment:hover {
+    background-color: #2980b9;
+}
+
+/* Список записей */
+.recordings-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 10px;
+    border: 1px solid #f1f2f6;
+    border-radius: 4px;
+}
+
+.recording-item {
+    padding: 15px;
+    border-bottom: 1px solid #f1f2f6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.recording-item:last-child {
+    border-bottom: none;
+}
+
+.recording-item:hover {
+    background-color: #f9f9f9;
+}
+
+.recording-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.recording-time {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.recording-duration {
+    font-size: 12px;
+    color: #7f8c8d;
+}
+
+.recording-item .play-btn {
+    padding: 8px 15px;
+    font-size: 12px;
+}
+
+/* Модальное окно снимка */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    overflow: auto;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: auto;
+    padding: 25px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 800px;
+    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 28px;
+    color: #7f8c8d;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: #e74c3c;
+}
+
+.snapshot-container {
+    margin: 20px 0;
+    text-align: center;
+}
+
+#snapshotImage {
+    max-width: 100%;
+    max-height: 600px;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* Индикатор загрузки */
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #3498db;
+    animation: spin 1s ease-in-out infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+#loadingMessage {
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Сообщения об ошибках */
+.error {
+    background-color: rgba(231, 76, 60, 0.1);
+    border-left: 4px solid #e74c3c;
+    padding: 15px;
+    margin: 10px 0;
+    color: #c0392b;
+    border-radius: 0 4px 4px 0;
+}
+
+/* Футер */
+footer {
+    background-color: #2c3e50;
+    color: #ecf0f1;
+    padding: 15px 30px;
+    text-align: center;
+    font-size: 14px;
+    margin-top: auto;
+}
+
+footer p {
+    margin: 5px 0;
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+    main {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+    
+    #video-container {
+        height: 400px;
+    }
+}
+
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        text-align: center;
+        padding: 15px;
+    }
+    
+    .system-info {
+        margin-top: 10px;
+    }
+    
+    main {
+        padding: 10px;
+    }
+    
+    #video-container {
+        height: 300px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        padding: 15px;
+    }
+}
+
+/* Стили для индикаторов загрузки */
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #a4b0be;
+    font-size: 14px;
+}
+
+.loading::after {
+    content: "";
+    width: 20px;
+    height: 20px;
+    margin-left: 10px;
+    border: 2px solid #3498db;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+}
+
+/* Стили для скачивания */
+#downloadLink {
+    display: none;
+}
