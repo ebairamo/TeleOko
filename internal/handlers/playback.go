@@ -4,7 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ebairamo/TeleOco/internal/hikvision"
+	"TeleOko/internal/hikvision"
+
 	"github.com/gin-gonic/gin"
 )
 
