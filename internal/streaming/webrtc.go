@@ -1,9 +1,19 @@
 package streaming
 
-// TODO: Добавить импорты для работы с WebRTC
-// Например: "github.com/pion/webrtc/v3"
+import (
+	"sync"
 
-// TODO: Добавить структуры и типы для работы с WebRTC
+	"github.com/pion/webrtc/v3"
+)
+
+type WebRTCConnection struct {
+	PeerConnection *webrtc.PeerConnection
+	VideoTrack     *webrtc.TrackLocalStaticSample
+	AudioTrack     *webrtc.TrackLocalStaticSample
+	stopChan       chan struct{}
+	mutex          sync.Mutex
+	isConnected    bool
+}
 
 // CreateWebRTCConnection создает новое WebRTC-соединение
 func CreateWebRTCConnection() (interface{}, error) {
