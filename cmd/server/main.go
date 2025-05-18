@@ -94,7 +94,7 @@ func main() {
 		// Заглушка для URL воспроизведения
 		api.GET("/playback-url", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
-				"url": "rtsp://example/test",
+				"url": "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov",
 			})
 		})
 
