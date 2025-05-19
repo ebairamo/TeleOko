@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/base64"
 	"net/http"
 	"strings"
 
@@ -15,13 +16,7 @@ type User struct {
 
 // Middleware для базовой аутентификации
 func BasicAuth(username, password string, enabled bool) gin.HandlerFunc {
-	// TODO: Реализовать middleware для базовой аутентификации
-	// 1. Если аутентификация выключена, просто пропускать запросы
-	// 2. Проверять заголовок Authorization
-	// 3. Декодировать и проверять учетные данные
-	// 4. При успешной аутентификации пропускать запрос
-	// 5. При неуспешной - возвращать 401 Unauthorized
-
+	// Если аутентификация выключена, просто пропускать запросы
 	if !enabled {
 		return func(c *gin.Context) {
 			c.Next()
@@ -29,26 +24,38 @@ func BasicAuth(username, password string, enabled bool) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
-		// TODO: Реализовать проверку аутентификации
-
 		// Получение заголовка авторизации
 		auth := c.GetHeader("Authorization")
 
 		// Проверка наличия заголовка
 		if auth == "" {
-			c.Header("WWW-Authenticate", "Basic realm=Restricted")
+			c.Header("WWW-Authenticate", "Basic realm=TeleOko")
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
 		// Проверка формата
 		if !strings.HasPrefix(auth, "Basic ") {
-			c.Header("WWW-Authenticate", "Basic realm=Restricted")
+			c.Header("WWW-Authenticate", "Basic realm=TeleOko")
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
-		// TODO: Декодирование и проверка учетных данных
+		// Декодирование и проверка учетных данных
+		payload, err := base64.StdEncoding.DecodeString(auth[6:])
+		if err != nil {
+			c.Header("WWW-Authenticate", "Basic realm=TeleOko")
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		// Разбор учетных данных (формат: username:password)
+		pair := strings.SplitN(string(payload), ":", 2)
+		if len(pair) != 2 || pair[0] != username || pair[1] != password {
+			c.Header("WWW-Authenticate", "Basic realm=TeleOko")
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
 
 		// Если все проверки пройдены
 		c.Next()

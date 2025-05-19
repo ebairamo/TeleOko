@@ -1,0 +1,35 @@
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /app
+
+# Копируем go.mod и go.sum
+COPY go.mod go.sum ./
+
+# Загружаем зависимости
+RUN go mod download
+
+# Копируем исходный код
+COPY . .
+
+# Собираем приложение
+RUN CGO_ENABLED=0 GOOS=linux go build -o teleoko ./cmd/server
+
+# Финальный образ
+FROM alpine:latest
+
+WORKDIR /app
+
+# Копируем бинарный файл из builder
+COPY --from=builder /app/teleoko .
+
+# Копируем статические файлы и шаблоны
+COPY --from=builder /app/web/ ./web/
+
+# Создаем директорию для конфигурации
+RUN mkdir -p /app/data
+
+# Порт для веб-интерфейса
+EXPOSE 8080
+
+# Запуск приложения
+CMD ["./teleoko"]

@@ -1,0 +1,15 @@
+{
+  "server": {
+    "port": 8082
+  },
+  "hikvision": {
+    "ip": "192.168.1.64",
+    "username": "admin",
+    "password": "admin12345"
+  },
+  "auth": {
+    "enabled": false,
+    "username": "admin",
+    "password": "admin"
+  }
+}

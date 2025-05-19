@@ -3,8 +3,8 @@ package streaming
 import (
 	"log"
 	"sync"
+	"time"
 
-	"github.com/deepch/vdk/format/rtsp"
 	"github.com/pion/webrtc/v3"
 	"github.com/pion/webrtc/v3/pkg/media"
 )
@@ -18,12 +18,6 @@ type WebRTCConnection struct {
 	isConnected    bool
 }
 
-type RTSPStream struct {
-	URL      string
-	Client   *rtsp.Client
-	StopChan chan bool
-}
-
 // CreateWebRTCConnection создает новое WebRTC-соединение
 func CreateWebRTCConnection() (*WebRTCConnection, error) {
 	// Создаем конфигурацию WebRTC с публичными STUN-серверами
@@ -35,8 +29,19 @@ func CreateWebRTCConnection() (*WebRTCConnection, error) {
 		},
 	}
 
+	// Создаем настройки медиа для WebRTC
+	mediaEngine := webrtc.MediaEngine{}
+
+	// Регистрируем кодеки
+	if err := mediaEngine.RegisterDefaultCodecs(); err != nil {
+		return nil, err
+	}
+
+	// Настраиваем API для WebRTC
+	api := webrtc.NewAPI(webrtc.WithMediaEngine(&mediaEngine))
+
 	// Создаем новое peer connection
-	peerConnection, err := webrtc.NewPeerConnection(config)
+	peerConnection, err := api.NewPeerConnection(config)
 	if err != nil {
 		return nil, err
 	}
@@ -63,67 +68,92 @@ func CreateWebRTCConnection() (*WebRTCConnection, error) {
 			conn.isConnected = false
 			conn.mutex.Unlock()
 
-			// Можно добавить логику для закрытия соединения
+			// Сигнал для остановки потока
+			select {
+			case conn.stopChan <- struct{}{}:
+			default:
+			}
 		}
 	})
 
 	return conn, nil
 }
 
-// TODO: Реализовать создание WebRTC-соединения
-// 1. Создать конфигурацию WebRTC
-// 2. Создать peer connection
-// 3. Настроить обработчики событий
-// 4. Вернуть соединение
-
 // RTSPtoWebRTC проксирует RTSP-поток в WebRTC
-func RTSPtoWebRTC(rtspURL string, conn *WebRTCConnection) error {
-	// Подключаемся к RTSP-потоку
-	rtspClient, err := rtsp.Dial(rtspURL)
+func RTSPtoWebRTC(rtspClient *RTSPClient, conn *WebRTCConnection) error {
+	// Создаем трек для видео - поддерживаем разные кодеки
+	var videoTrack *webrtc.TrackLocalStaticSample
+	var err error
+
+	// Пробуем использовать H264
+	videoTrack, err = webrtc.NewTrackLocalStaticSample(
+		webrtc.RTPCodecCapability{
+			MimeType: webrtc.MimeTypeH264,
+		},
+		"video", "teleoko",
+	)
+
+	if err != nil {
+		// Если H264 не поддерживается, пробуем VP8
+		videoTrack, err = webrtc.NewTrackLocalStaticSample(
+			webrtc.RTPCodecCapability{
+				MimeType: webrtc.MimeTypeVP8,
+			},
+			"video", "teleoko",
+		)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	conn.VideoTrack = videoTrack
+
+	// Добавляем видеотрек в peer connection
+	rtpSender, err := conn.PeerConnection.AddTrack(videoTrack)
 	if err != nil {
 		return err
 	}
 
-	// Создаем RTSP-поток
-	stream := &RTSPStream{
-		URL:      rtspURL,
-		Client:   rtspClient,
-		StopChan: make(chan bool),
-	}
-
-	// Запускаем горутину для чтения пакетов из RTSP
+	// Обрабатываем RTCP-пакеты
 	go func() {
-		defer rtspClient.Close()
+		rtcpBuf := make([]byte, 1500)
+		for {
+			if _, _, rtcpErr := rtpSender.Read(rtcpBuf); rtcpErr != nil {
+				return
+			}
+		}
+	}()
 
-		// Бесконечный цикл чтения пакетов
+	// Запускаем горутину для проксирования RTSP в WebRTC
+	go func() {
+		defer func() {
+			log.Println("Остановка проксирования RTSP в WebRTC")
+		}()
+
 		for {
 			select {
-			case <-stream.StopChan:
-				// Получен сигнал остановки
+			case <-conn.stopChan:
 				return
 			default:
-				// Читаем пакет из RTSP
-				pkt, err := rtspClient.ReadPacket()
+				// Получаем пакет из RTSP
+				packet, err := rtspClient.GetPacket()
 				if err != nil {
-					log.Printf("Ошибка чтения RTSP-пакета: %v", err)
-					return
+					log.Printf("Ошибка получения пакета RTSP: %v", err)
+					time.Sleep(100 * time.Millisecond)
+					continue
 				}
 
-				// Если это видеопакет
-				if pkt.IsKeyFrame || pkt.IsFrame {
-					// Создаем RTP пакет
-					sample := &media.Sample{
-						Data:      pkt.Data,
-						Duration:  pkt.Duration,
-						Timestamp: pkt.Time,
-					}
+				// Обрабатываем пакет
+				sample := media.Sample{
+					Data:      packet.Data,
+					Duration:  packet.Duration,
+					Timestamp: time.Now(),
+				}
 
-					// Отправляем пакет в WebRTC-трек
-					if conn.VideoTrack != nil {
-						if err := conn.VideoTrack.WriteSample(*sample); err != nil {
-							log.Printf("Ошибка отправки видеопакета: %v", err)
-						}
-					}
+				// Отправляем в WebRTC-трек
+				if err := videoTrack.WriteSample(sample); err != nil {
+					log.Printf("Ошибка отправки видеопакета: %v", err)
 				}
 			}
 		}
@@ -131,12 +161,6 @@ func RTSPtoWebRTC(rtspURL string, conn *WebRTCConnection) error {
 
 	return nil
 }
-
-// TODO: Реализовать проксирование RTSP в WebRTC
-// 1. Получить RTSP-соединение
-// 2. Создать видео- и аудиотреки
-// 3. Добавить треки в peer connection
-// 4. Запустить горутину для чтения пакетов из RTSP и записи в WebRTC
 
 // HandleOffer обрабатывает SDP-предложение от клиента и создает ответ
 func (conn *WebRTCConnection) HandleOffer(offerSDP string) (string, error) {
@@ -147,21 +171,6 @@ func (conn *WebRTCConnection) HandleOffer(offerSDP string) (string, error) {
 	}
 
 	if err := conn.PeerConnection.SetRemoteDescription(offer); err != nil {
-		return "", err
-	}
-
-	// Создаем трек для видео
-	videoTrack, err := webrtc.NewTrackLocalStaticSample(
-		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264},
-		"video", "pion",
-	)
-	if err != nil {
-		return "", err
-	}
-	conn.VideoTrack = videoTrack
-
-	// Добавляем трек в peer connection
-	if _, err := conn.PeerConnection.AddTrack(videoTrack); err != nil {
 		return "", err
 	}
 
@@ -177,4 +186,18 @@ func (conn *WebRTCConnection) HandleOffer(offerSDP string) (string, error) {
 	}
 
 	return answer.SDP, nil
+}
+
+// Close закрывает WebRTC-соединение
+func (conn *WebRTCConnection) Close() {
+	// Сигнал для остановки потока
+	select {
+	case conn.stopChan <- struct{}{}:
+	default:
+	}
+
+	// Закрываем peer connection
+	if conn.PeerConnection != nil {
+		conn.PeerConnection.Close()
+	}
 }
