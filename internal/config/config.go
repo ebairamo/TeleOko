@@ -40,7 +40,7 @@ var defaultConfig = Config{
 	}{
 		IP:       "192.168.1.64",
 		Username: "admin",
-		Password: "admin12345",
+		Password: "oborotni2447",
 	},
 	Auth: struct {
 		Enabled  bool   `json:"enabled"`
