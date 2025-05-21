@@ -1,234 +1,79 @@
+// internal/handlers/live.go
 package handlers
 
 import (
-	"log"
 	"net/http"
 
-	"TeleOko/internal/config"
 	"TeleOko/internal/hikvision"
-	"TeleOko/internal/streaming"
+	"TeleOko/internal/network"
 
 	"github.com/gin-gonic/gin"
 )
 
-// WebRTCOffer структура для получения SDP-оффера от клиента
-type WebRTCOffer struct {
-	Type string `json:"type"`
-	SDP  string `json:"sdp"`
-}
-
-// WebRTCPlaybackOffer структура для получения SDP-оффера от клиента с URL для воспроизведения
-type WebRTCPlaybackOffer struct {
-	Offer WebRTCOffer `json:"offer"`
-	URL   string      `json:"url"`
-}
-
-// Кэш активных соединений WebRTC
-var activeConnections = make(map[string]*streaming.WebRTCConnection)
-
 // GetLiveStream обрабатывает запрос на получение прямого эфира
 func GetLiveStream(c *gin.Context) {
+	// Получаем параметры запроса (канал)
 	channel := c.Param("channel")
 	if channel == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Канал не указан"})
 		return
 	}
 
-	// Получаем конфигурацию
-	cfg, err := config.Load()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка загрузки конфигурации"})
-		return
+	// Получение URL для RTSP с автоматическим определением IP камеры
+	rtspURL := hikvision.GetRTSPURL(channel, false)
+
+	// Получение информации о текущей камере для логирования
+	camera := network.GetDefaultCamera()
+	cameraIP := "неизвестно"
+	if camera != nil {
+		cameraIP = camera.IP
 	}
 
-	// Получение URL для RTSP
-	rtspURL := hikvision.GetRTSPURL(
-		cfg.Hikvision.IP,
-		cfg.Hikvision.Username,
-		cfg.Hikvision.Password,
-		channel,
-		false,
-	)
+	// TODO: Настроить проксирование в WebRTC или HLS
 
 	c.JSON(http.StatusOK, gin.H{
-		"channel":  channel,
-		"rtsp_url": rtspURL,
+		"channel":   channel,
+		"rtsp_url":  rtspURL,
+		"camera_ip": cameraIP,
 	})
 }
 
-// HandleWebRTCOffer обрабатывает WebRTC-оффер для прямого эфира
+// HandleWebRTCOffer обрабатывает WebRTC-оффер
 func HandleWebRTCOffer(c *gin.Context) {
+	// Получаем параметры запроса (канал и оффер)
 	channel := c.Query("channel")
 	if channel == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Канал не указан"})
 		return
 	}
 
-	// Получение конфигурации
-	cfg, err := config.Load()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка загрузки конфигурации"})
-		return
+	// Получение информации о выбранной камере
+	preferredCameraIP := c.Query("camera_ip")
+	camera := network.GetBestCamera(preferredCameraIP)
+
+	// Информация о камере для включения в ответ
+	cameraInfo := map[string]string{
+		"ip":     "неизвестно",
+		"status": "неизвестно",
 	}
 
-	// Получаем SDP-оффер от клиента
-	var offer WebRTCOffer
-	if err := c.ShouldBindJSON(&offer); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат оффера"})
-		return
+	if camera != nil {
+		cameraInfo["ip"] = camera.IP
+		cameraInfo["status"] = camera.Status
 	}
 
-	// Закрываем существующее соединение для этого канала, если есть
-	if conn, ok := activeConnections[channel]; ok {
-		conn.Close()
-		delete(activeConnections, channel)
-	}
+	// TODO: Реализовать остальную логику
+	// 1. Получить оффер из тела запроса
+	// 2. Создать WebRTC-соединение
+	// 3. Настроить проксирование RTSP в WebRTC
+	// 4. Сформировать и вернуть ответ
 
-	// Создаем новое WebRTC-соединение
-	webrtcConn, err := streaming.CreateWebRTCConnection()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка создания WebRTC соединения: " + err.Error()})
-		return
-	}
-
-	// Сохраняем соединение в кэше
-	activeConnections[channel] = webrtcConn
-
-	// Получаем RTSP URL
-	rtspURL := hikvision.GetRTSPURL(
-		cfg.Hikvision.IP,
-		cfg.Hikvision.Username,
-		cfg.Hikvision.Password,
-		channel,
-		false,
-	)
-
-	// Получаем RTSP-клиент
-	rtspClient, err := streaming.GetRTSPConnection(
-		rtspURL,
-		cfg.Hikvision.Username,
-		cfg.Hikvision.Password,
-	)
-	if err != nil {
-		webrtcConn.Close()
-		delete(activeConnections, channel)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка подключения к RTSP: " + err.Error()})
-		return
-	}
-
-	// Обрабатываем SDP-оффер от клиента
-	sdpAnswer, err := webrtcConn.HandleOffer(offer.SDP)
-	if err != nil {
-		webrtcConn.Close()
-		delete(activeConnections, channel)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка обработки SDP-оффера: " + err.Error()})
-		return
-	}
-
-	// Настраиваем проксирование RTSP в WebRTC
-	if err := streaming.RTSPtoWebRTC(rtspClient, webrtcConn); err != nil {
-		webrtcConn.Close()
-		delete(activeConnections, channel)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка настройки проксирования: " + err.Error()})
-		return
-	}
-
-	// Возвращаем SDP-ответ
+	// Временная заглушка ответа
 	c.JSON(http.StatusOK, gin.H{
-		"type": "answer",
-		"sdp":  sdpAnswer,
+		"status":  "success",
+		"channel": channel,
+		"camera":  cameraInfo,
+		"type":    "answer",
+		"sdp":     "v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=msid-semantic: WMS\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:dummy\r\na=ice-pwd:dummy\r\na=fingerprint:sha-256 00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00\r\na=setup:actpass\r\na=mid:0\r\na=extmap:1 urn:ietf:params:rtp-hdrext:toffset\r\na=recvonly\r\na=rtpmap:96 VP8/90000\r\na=rtcp-fb:96 nack\r\na=rtcp-fb:96 nack pli\r\na=rtcp-fb:96 goog-remb\r\n",
 	})
-}
-
-// HandlePlaybackOffer обрабатывает WebRTC-оффер для воспроизведения архива
-func HandlePlaybackOffer(c *gin.Context) {
-	// Получаем SDP-оффер и URL для воспроизведения от клиента
-	var playbackOffer WebRTCPlaybackOffer
-	if err := c.ShouldBindJSON(&playbackOffer); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат оффера"})
-		return
-	}
-
-	if playbackOffer.URL == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "URL для воспроизведения не указан"})
-		return
-	}
-
-	// Генерируем уникальный ключ для этого воспроизведения
-	playbackKey := "playback-" + playbackOffer.URL
-
-	// Закрываем существующее соединение для этого URL, если есть
-	if conn, ok := activeConnections[playbackKey]; ok {
-		conn.Close()
-		delete(activeConnections, playbackKey)
-	}
-
-	// Создаем новое WebRTC-соединение
-	webrtcConn, err := streaming.CreateWebRTCConnection()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка создания WebRTC соединения: " + err.Error()})
-		return
-	}
-
-	// Сохраняем соединение в кэше
-	activeConnections[playbackKey] = webrtcConn
-
-	// Получаем конфигурацию
-	cfg, err := config.Load()
-	if err != nil {
-		webrtcConn.Close()
-		delete(activeConnections, playbackKey)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка загрузки конфигурации"})
-		return
-	}
-
-	// Получаем RTSP-клиент
-	rtspClient, err := streaming.GetRTSPConnection(
-		playbackOffer.URL,
-		cfg.Hikvision.Username,
-		cfg.Hikvision.Password,
-	)
-	if err != nil {
-		webrtcConn.Close()
-		delete(activeConnections, playbackKey)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка подключения к RTSP: " + err.Error()})
-		return
-	}
-
-	// Обрабатываем SDP-оффер от клиента
-	sdpAnswer, err := webrtcConn.HandleOffer(playbackOffer.Offer.SDP)
-	if err != nil {
-		webrtcConn.Close()
-		delete(activeConnections, playbackKey)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка обработки SDP-оффера: " + err.Error()})
-		return
-	}
-
-	// Настраиваем проксирование RTSP в WebRTC
-	if err := streaming.RTSPtoWebRTC(rtspClient, webrtcConn); err != nil {
-		webrtcConn.Close()
-		delete(activeConnections, playbackKey)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка настройки проксирования: " + err.Error()})
-		return
-	}
-
-	// Возвращаем SDP-ответ
-	c.JSON(http.StatusOK, gin.H{
-		"type": "answer",
-		"sdp":  sdpAnswer,
-	})
-}
-
-// CleanupConnections освобождает все соединения
-func CleanupConnections() {
-	for key, conn := range activeConnections {
-		log.Printf("Закрытие соединения: %s", key)
-		conn.Close()
-	}
-
-	// Очистка кэша соединений
-	activeConnections = make(map[string]*streaming.WebRTCConnection)
-
-	// Закрытие всех RTSP-соединений
-	streaming.CloseAllConnections()
 }

@@ -1,11 +1,12 @@
+// internal/handlers/playback.go
 package handlers
 
 import (
 	"net/http"
 	"time"
 
-	"TeleOko/internal/config"
 	"TeleOko/internal/hikvision"
+	"TeleOko/internal/network"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,51 +28,25 @@ func GetRecordings(c *gin.Context) {
 		endDate = time.Now().Format("2006-01-02")
 	}
 
-	// Получаем конфигурацию
-	cfg, err := config.Load()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка загрузки конфигурации"})
-		return
+	// Получение информации о текущей камере для логирования
+	camera := network.GetDefaultCamera()
+	cameraIP := "неизвестно"
+	if camera != nil {
+		cameraIP = camera.IP
 	}
 
-	// Поиск записей
-	recordings, err := hikvision.SearchRecordings(
-		cfg.Hikvision.IP,
-		cfg.Hikvision.Username,
-		cfg.Hikvision.Password,
-		channel,
-		startDate,
-		endDate,
-	)
-
+	// Поиск записей с автоматическим определением IP камеры
+	recordings, err := hikvision.SearchRecordings(channel, startDate, endDate)
 	if err != nil {
-		// Если произошла ошибка при поиске записей, возвращаем тестовые данные
-		// для возможности демонстрации интерфейса
-		c.JSON(http.StatusOK, gin.H{
-			"recordings": []map[string]string{
-				{
-					"StartTime": startDate + "T08:00:00Z",
-					"EndTime":   startDate + "T08:15:00Z",
-					"Channel":   channel,
-				},
-				{
-					"StartTime": startDate + "T12:30:00Z",
-					"EndTime":   startDate + "T12:45:00Z",
-					"Channel":   channel,
-				},
-				{
-					"StartTime": startDate + "T18:15:00Z",
-					"EndTime":   startDate + "T18:30:00Z",
-					"Channel":   channel,
-				},
-			},
-			"warning": "Используются тестовые данные: " + err.Error(),
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"recordings": recordings,
+		"camera_ip":  cameraIP,
+		"start_date": startDate,
+		"end_date":   endDate,
 	})
 }
 
@@ -87,35 +62,26 @@ func GetPlaybackURL(c *gin.Context) {
 		return
 	}
 
-	// Если конечное время не указано, используем текущее или добавляем 10 минут к начальному
+	// Если конечное время не указано, используем текущее
 	if endTime == "" {
-		startTimeObj, err := time.Parse(time.RFC3339, startTime)
-		if err != nil {
-			endTime = time.Now().Format(time.RFC3339)
-		} else {
-			// Добавляем 10 минут к начальному времени
-			endTime = startTimeObj.Add(10 * time.Minute).Format(time.RFC3339)
-		}
+		endTime = time.Now().Format("2006-01-02T15:04:05Z")
 	}
 
-	// Получаем конфигурацию
-	cfg, err := config.Load()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка загрузки конфигурации"})
-		return
-	}
+	// Получение URL для воспроизведения архива с автоматическим определением IP камеры
+	url := hikvision.GetPlaybackURL(channel, startTime, endTime)
 
-	// Получение URL для воспроизведения архива
-	url := hikvision.GetPlaybackURL(
-		cfg.Hikvision.IP,
-		cfg.Hikvision.Username,
-		cfg.Hikvision.Password,
-		channel,
-		startTime,
-		endTime,
-	)
+	// Получение информации о текущей камере для логирования
+	camera := network.GetDefaultCamera()
+	cameraIP := "неизвестно"
+	if camera != nil {
+		cameraIP = camera.IP
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"url": url,
+		"url":        url,
+		"camera_ip":  cameraIP,
+		"channel":    channel,
+		"start_time": startTime,
+		"end_time":   endTime,
 	})
 }

@@ -1,9 +1,7 @@
 package streaming
 
 import (
-	"fmt"
 	"log"
-	"strings"
 	"sync"
 	"time"
 
@@ -12,20 +10,13 @@ import (
 
 // RTSPClient представляет клиент для подключения к RTSP-потоку
 type RTSPClient struct {
-	URL      string
-	Username string
-	Password string
-	Session  *rtsp.Client
-	Active   bool
-	Mutex    sync.Mutex
-}
-
-// StreamPacket представляет пакет данных из потока
-type StreamPacket struct {
-	Data       []byte
-	IsKeyFrame bool
-	Duration   time.Duration
-	Time       time.Duration
+	URL        string
+	Username   string
+	Password   string
+	Connection *rtsp.Client
+	Connected  bool
+	LastError  error
+	LastAccess time.Time
 }
 
 // Кэш для хранения подключений к RTSP
@@ -36,36 +27,31 @@ var (
 
 // NewRTSPClient создает новый RTSP-клиент
 func NewRTSPClient(url, username, password string) (*RTSPClient, error) {
-	log.Printf("Создание нового RTSP-клиента для %s", url)
-
-	// Проверяем наличие учетных данных в URL
-	if username != "" && password != "" {
-		// Проверяем, содержит ли URL уже учетные данные
-		if !strings.Contains(url, "@") {
-			// Разбиваем URL на составные части
-			urlParts := strings.SplitN(url, "://", 2)
-			if len(urlParts) != 2 {
-				return nil, fmt.Errorf("неверный формат URL: %s", url)
-			}
-
-			// Добавляем учетные данные
-			url = fmt.Sprintf("%s://%s:%s@%s", urlParts[0], username, password, urlParts[1])
-		}
-	}
-
 	// Создаем клиент RTSP
-	session, err := rtsp.Dial(url)
+	client, err := rtsp.Dial(url)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка подключения к RTSP: %w", err)
+		return &RTSPClient{
+			URL:        url,
+			Username:   username,
+			Password:   password,
+			Connected:  false,
+			LastError:  err,
+			LastAccess: time.Now(),
+		}, err
 	}
 
-	// Создаем экземпляр клиента
+	// Если для подключения требуется аутентификация, не можем явно установить учетные данные
+	// т.к. метод SetCredentials отсутствует в библиотеке vdk/rtsp
+	// Вместо этого учетные данные должны быть частью URL
+
+	// Создаем и возвращаем клиент
 	rtspClient := &RTSPClient{
-		URL:      url,
-		Username: username,
-		Password: password,
-		Session:  session,
-		Active:   true,
+		URL:        url,
+		Username:   username,
+		Password:   password,
+		Connection: client,
+		Connected:  true,
+		LastAccess: time.Now(),
 	}
 
 	return rtspClient, nil
@@ -76,48 +62,53 @@ func GetRTSPConnection(url, username, password string) (*RTSPClient, error) {
 	rtspMutex.Lock()
 	defer rtspMutex.Unlock()
 
-	// Формируем ключ для кэша
-	cacheKey := url
+	// Проверяем, есть ли соединение в кэше
+	if client, ok := rtspConnections[url]; ok {
+		// Обновляем время последнего доступа
+		client.LastAccess = time.Now()
 
-	// Проверяем наличие соединения в кэше
-	if client, ok := rtspConnections[cacheKey]; ok {
-		// Проверяем состояние соединения
-		client.Mutex.Lock()
-		defer client.Mutex.Unlock()
-
-		if client.Active && client.Session != nil {
-			log.Printf("Использование существующего RTSP-соединения для %s", url)
+		// Проверяем, не закрыто ли соединение
+		if client.Connected && client.Connection != nil {
 			return client, nil
 		}
 
-		// Если соединение неактивно или закрыто, пересоздаем его
-		log.Printf("Переподключение к RTSP %s", url)
-		if client.Session != nil {
-			client.Session.Close()
+		// Если соединение закрыто, пытаемся пересоздать
+		newClient, err := NewRTSPClient(url, username, password)
+		if err != nil {
+			return client, err // Возвращаем старый клиент и ошибку
 		}
+
+		// Заменяем клиент в кэше и возвращаем новый
+		rtspConnections[url] = newClient
+		return newClient, nil
 	}
 
-	// Создаем новое соединение
+	// Если соединения нет в кэше, создаем новое
 	client, err := NewRTSPClient(url, username, password)
 	if err != nil {
-		return nil, err
+		// Все равно сохраняем клиент в кэше, даже если соединение не удалось
+		// В следующий раз мы попробуем пересоздать
+		rtspConnections[url] = client
+		return client, err
 	}
 
-	// Добавляем в кэш
-	rtspConnections[cacheKey] = client
+	// Добавляем клиент в кэш
+	rtspConnections[url] = client
 	return client, nil
 }
 
-// CloseConnection закрывает соединение
-func (c *RTSPClient) CloseConnection() {
-	c.Mutex.Lock()
-	defer c.Mutex.Unlock()
+// CloseRTSPConnection закрывает RTSP-соединение
+func CloseRTSPConnection(url string) {
+	rtspMutex.Lock()
+	defer rtspMutex.Unlock()
 
-	if c.Session != nil {
-		c.Session.Close()
-		c.Session = nil
+	if client, ok := rtspConnections[url]; ok {
+		if client.Connection != nil {
+			client.Connection.Close()
+		}
+		client.Connected = false
+		delete(rtspConnections, url)
 	}
-	c.Active = false
 }
 
 // CloseAllConnections закрывает все соединения
@@ -125,43 +116,42 @@ func CloseAllConnections() {
 	rtspMutex.Lock()
 	defer rtspMutex.Unlock()
 
-	for _, client := range rtspConnections {
-		client.CloseConnection()
+	for url, client := range rtspConnections {
+		if client.Connection != nil {
+			client.Connection.Close()
+		}
+		delete(rtspConnections, url)
 	}
 
-	// Очистка кэша соединений
-	rtspConnections = make(map[string]*RTSPClient)
+	log.Println("Все RTSP-соединения закрыты")
 }
 
-// GetPacket получает пакет из RTSP-потока
-func (c *RTSPClient) GetPacket() (*StreamPacket, error) {
-	c.Mutex.Lock()
-	defer c.Mutex.Unlock()
+// CleanupOldConnections закрывает устаревшие соединения
+func CleanupOldConnections(maxAge time.Duration) {
+	rtspMutex.Lock()
+	defer rtspMutex.Unlock()
 
-	if c.Session == nil || !c.Active {
-		return nil, fmt.Errorf("клиент RTSP неактивен")
-	}
-
-	// Читаем пакет
-	pkt, err := c.Session.ReadPacket()
-	if err != nil {
-		c.Active = false
-		return nil, fmt.Errorf("ошибка чтения пакета: %w", err)
-	}
-
-	// Проверяем, что это видеопакет
-	if pkt.IsKeyFrame || pkt.Idx == 0 { // обычно видео имеет индекс 0
-		// Создаем пакет
-		packet := &StreamPacket{
-			Data:       pkt.Data,
-			IsKeyFrame: pkt.IsKeyFrame,
-			Duration:   pkt.Duration,
-			Time:       pkt.Time,
+	now := time.Now()
+	for url, client := range rtspConnections {
+		// Если соединение не использовалось дольше maxAge, закрываем его
+		if now.Sub(client.LastAccess) > maxAge {
+			if client.Connection != nil {
+				client.Connection.Close()
+			}
+			delete(rtspConnections, url)
+			log.Printf("Закрыто устаревшее RTSP-соединение: %s", url)
 		}
-
-		return packet, nil
 	}
+}
 
-	// Если это не видеопакет, возвращаем ошибку
-	return nil, fmt.Errorf("не видеопакет")
+// StartRTSPCleanupRoutine запускает периодическую очистку устаревших соединений
+func StartRTSPCleanupRoutine(interval, maxAge time.Duration) {
+	ticker := time.NewTicker(interval)
+	go func() {
+		for range ticker.C {
+			CleanupOldConnections(maxAge)
+		}
+	}()
+
+	log.Printf("Запущена периодическая очистка RTSP-соединений (интервал: %v, максимальный возраст: %v)", interval, maxAge)
 }

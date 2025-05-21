@@ -1,8 +1,10 @@
+// internal/config/config.go
 package config
 
 import (
 	"encoding/json"
-	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -14,9 +16,12 @@ type Config struct {
 	} `json:"server"`
 
 	Hikvision struct {
-		IP       string `json:"ip"`
-		Username string `json:"username"`
-		Password string `json:"password"`
+		IP            string   `json:"ip"`
+		Username      string   `json:"username"`
+		Password      string   `json:"password"`
+		PreferredIPs  []string `json:"preferred_ips"`  // Предпочтительные IP-адреса камер
+		AutoDiscovery bool     `json:"auto_discovery"` // Включить автоматическое обнаружение камер
+		ScanInterval  int      `json:"scan_interval"`  // Интервал сканирования в минутах
 	} `json:"hikvision"`
 
 	Auth struct {
@@ -26,21 +31,30 @@ type Config struct {
 	} `json:"auth"`
 }
 
+// Глобальная переменная для хранения конфигурации
+var GlobalConfig Config
+
 // Значения по умолчанию
 var defaultConfig = Config{
 	Server: struct {
 		Port int `json:"port"`
 	}{
-		Port: 8082, // Изменено с 8080 на 8082
+		Port: 8080,
 	},
 	Hikvision: struct {
-		IP       string `json:"ip"`
-		Username string `json:"username"`
-		Password string `json:"password"`
+		IP            string   `json:"ip"`
+		Username      string   `json:"username"`
+		Password      string   `json:"password"`
+		PreferredIPs  []string `json:"preferred_ips"`
+		AutoDiscovery bool     `json:"auto_discovery"`
+		ScanInterval  int      `json:"scan_interval"`
 	}{
-		IP:       "192.168.1.64",
-		Username: "admin",
-		Password: "oborotni2447",
+		IP:            "192.168.8.15",
+		Username:      "admin",
+		Password:      "oborotni2447",
+		PreferredIPs:  []string{},
+		AutoDiscovery: true,
+		ScanInterval:  5,
 	},
 	Auth: struct {
 		Enabled  bool   `json:"enabled"`
@@ -49,92 +63,122 @@ var defaultConfig = Config{
 	}{
 		Enabled:  false,
 		Username: "admin",
-		Password: "admin",
+		Password: "password",
 	},
 }
 
-// Путь к файлу конфигурации
-const configPath = "config.json"
-
 // Load загружает конфигурацию из файла или использует значения по умолчанию
 func Load() (*Config, error) {
-	// Проверяем наличие файла конфигурации
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		// Файла нет, создаем новый с настройками по умолчанию
-		return saveDefaultConfig()
+	// Пути к файлу конфигурации
+	configPaths := []string{
+		"config.json",
+		filepath.Join("config", "config.json"),
+		filepath.Join("..", "config", "config.json"),
 	}
 
-	// Файл существует, загружаем из него
-	file, err := os.Open(configPath)
-	if err != nil {
-		return &defaultConfig, fmt.Errorf("ошибка открытия файла конфигурации: %w", err)
-	}
-	defer file.Close()
-
-	var config Config
-	if err := json.NewDecoder(file).Decode(&config); err != nil {
-		return &defaultConfig, fmt.Errorf("ошибка разбора файла конфигурации: %w", err)
-	}
-
-	return &config, nil
-}
-
-// saveDefaultConfig сохраняет конфигурацию по умолчанию в файл
-func saveDefaultConfig() (*Config, error) {
-	// Создаем директорию для файла конфигурации, если она не существует
-	dir := filepath.Dir(configPath)
-	if dir != "." && dir != "" {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return &defaultConfig, fmt.Errorf("ошибка создания директории для конфигурации: %w", err)
+	var configFile string
+	for _, path := range configPaths {
+		if _, err := os.Stat(path); err == nil {
+			configFile = path
+			break
 		}
 	}
 
-	// Создаем файл
-	file, err := os.Create(configPath)
+	// Если файл конфигурации найден, загружаем его
+	if configFile != "" {
+		log.Printf("Загрузка конфигурации из файла: %s", configFile)
+		data, err := ioutil.ReadFile(configFile)
+		if err != nil {
+			log.Printf("Ошибка чтения файла конфигурации: %v", err)
+			return &defaultConfig, nil
+		}
+
+		var config Config
+		if err := json.Unmarshal(data, &config); err != nil {
+			log.Printf("Ошибка разбора файла конфигурации: %v", err)
+			return &defaultConfig, nil
+		}
+
+		GlobalConfig = config
+		return &config, nil
+	}
+
+	// Если файл не найден, создаем его с настройками по умолчанию
+	log.Println("Файл конфигурации не найден, создание файла с настройками по умолчанию")
+
+	// Создаем директорию config, если ее нет
+	if err := os.MkdirAll("config", 0755); err != nil {
+		log.Printf("Ошибка создания директории config: %v", err)
+	}
+
+	// Сериализуем конфигурацию по умолчанию в JSON
+	data, err := json.MarshalIndent(defaultConfig, "", "    ")
 	if err != nil {
-		return &defaultConfig, fmt.Errorf("ошибка создания файла конфигурации: %w", err)
-	}
-	defer file.Close()
-
-	// Записываем JSON
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(defaultConfig); err != nil {
-		return &defaultConfig, fmt.Errorf("ошибка записи конфигурации: %w", err)
+		log.Printf("Ошибка сериализации конфигурации: %v", err)
+	} else {
+		// Записываем в файл
+		if err := ioutil.WriteFile(filepath.Join("config", "config.json"), data, 0644); err != nil {
+			log.Printf("Ошибка записи файла конфигурации: %v", err)
+		}
 	}
 
+	GlobalConfig = defaultConfig
 	return &defaultConfig, nil
 }
 
-// Save сохраняет конфигурацию в файл
-func Save(config *Config) error {
-	// Создаем директорию для файла конфигурации, если она не существует
-	dir := filepath.Dir(configPath)
-	if dir != "." && dir != "" {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("ошибка создания директории для конфигурации: %w", err)
+// GetCameraCredentials возвращает учетные данные для камеры
+func GetCameraCredentials() (string, string) {
+	return GlobalConfig.Hikvision.Username, GlobalConfig.Hikvision.Password
+}
+
+// Save сохраняет текущую конфигурацию в файл
+func Save() error {
+	// Сериализуем конфигурацию в JSON
+	data, err := json.MarshalIndent(GlobalConfig, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	// Создаем директорию config, если ее нет
+	if err := os.MkdirAll("config", 0755); err != nil {
+		return err
+	}
+
+	// Записываем в файл
+	return ioutil.WriteFile(filepath.Join("config", "config.json"), data, 0644)
+}
+
+// GetPreferredCameraIPs возвращает список предпочтительных IP-адресов камер
+func GetPreferredCameraIPs() []string {
+	return GlobalConfig.Hikvision.PreferredIPs
+}
+
+// AddPreferredCameraIP добавляет IP-адрес в список предпочтительных
+func AddPreferredCameraIP(ip string) error {
+	// Проверяем, есть ли уже такой IP в списке
+	for _, existingIP := range GlobalConfig.Hikvision.PreferredIPs {
+		if existingIP == ip {
+			return nil // IP уже есть в списке
 		}
 	}
 
-	// Создаем файл
-	file, err := os.Create(configPath)
-	if err != nil {
-		return fmt.Errorf("ошибка создания файла конфигурации: %w", err)
-	}
-	defer file.Close()
+	// Добавляем IP в список
+	GlobalConfig.Hikvision.PreferredIPs = append(GlobalConfig.Hikvision.PreferredIPs, ip)
 
-	// Записываем JSON
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(config); err != nil {
-		return fmt.Errorf("ошибка записи конфигурации: %w", err)
-	}
-
-	return nil
+	// Сохраняем конфигурацию
+	return Save()
 }
 
-// GetLocalIP возвращает локальный IP-адрес
-func GetLocalIP() (string, error) {
-	// Используем функцию из пакета network
-	return "192.168.1.100", nil
+// IsAutoDiscoveryEnabled возвращает, включено ли автоматическое обнаружение камер
+func IsAutoDiscoveryEnabled() bool {
+	return GlobalConfig.Hikvision.AutoDiscovery
+}
+
+// GetScanInterval возвращает интервал сканирования в минутах
+func GetScanInterval() int {
+	interval := GlobalConfig.Hikvision.ScanInterval
+	if interval < 1 {
+		return 5 // Минимальный интервал 1 минута, по умолчанию 5 минут
+	}
+	return interval
 }

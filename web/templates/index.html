@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TeleOko - Система видеонаблюдения</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/camera-styles.css">
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -26,21 +27,20 @@
                     <option value="1">Общий план</option>
                     <option value="101">Камера 1</option>
                     <option value="102">Камера 2</option>
-                    <option value="102">Камера 3</option>
-                    <option value="102">Камера 4</option>
-                    <option value="102">Камера 5</option>
-                    <option value="102">Камера 6</option>
-                    <option value="102">Камера 7</option>
-                    <option value="102">Камера 8</option>
-                    <option value="102">Камера 9</option>
-                    <option value="102">Камера 10</option>
-                    <option value="102">Камера 11</option>
-                    <option value="102">Камера 12</option>
-                    <option value="102">Камера 13</option>
-                    <option value="102">Камера 14</option>
-                    <option value="102">Камера 15</option>
-                    <option value="102">Камера 16</option>
-
+                    <option value="103">Камера 3</option>
+                    <option value="104">Камера 4</option>
+                    <option value="105">Камера 5</option>
+                    <option value="106">Камера 6</option>
+                    <option value="107">Камера 7</option>
+                    <option value="108">Камера 8</option>
+                    <option value="109">Камера 9</option>
+                    <option value="110">Камера 10</option>
+                    <option value="111">Камера 11</option>
+                    <option value="112">Камера 12</option>
+                    <option value="113">Камера 13</option>
+                    <option value="114">Камера 14</option>
+                    <option value="115">Камера 15</option>
+                    <option value="116">Камера 16</option>
                 </select>
                 <div class="buttons">
                     <button id="liveBtn" class="primary-btn">Прямой эфир</button>
@@ -79,6 +79,14 @@
                     <div class="recordings-empty">Выберите дату и нажмите "Поиск записей"</div>
                 </div>
             </div>
+            
+            <div class="cameras-info-container">
+                <h3>Обнаруженные камеры</h3>
+                <div id="camerasInfo" class="cameras-info">
+                    <div class="cameras-empty">Загрузка информации о камерах...</div>
+                </div>
+                <button id="scanCamerasBtn" class="refresh-cameras-btn">Сканировать сеть</button>
+            </div>
         </div>
     </main>
 
@@ -106,6 +114,8 @@
         <p>Версия 1.0.0</p>
     </footer>
 
+    <!-- Скрипты -->
     <script src="/static/js/main.js"></script>
+    <script src="/static/js/cameras.js"></script>
 </body>
 </html>

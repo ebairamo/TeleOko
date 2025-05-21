@@ -1,15 +1,18 @@
 {
-  "server": {
-    "port": 8082
-  },
-  "hikvision": {
-    "ip": "192.168.1.64",
-    "username": "admin",
-    "password": "oborotni2447"
-  },
-  "auth": {
-    "enabled": false,
-    "username": "admin",
-    "password": "admin"
-  }
+    "server": {
+        "port": 8082
+    },
+    "hikvision": {
+        "ip": "192.168.1.64",
+        "username": "admin",
+        "password": "oborotni2447",
+        "preferred_ips": [],
+        "auto_discovery": true,
+        "scan_interval": 5
+    },
+    "auth": {
+        "enabled": false,
+        "username": "admin",
+        "password": "password"
+    }
 }
