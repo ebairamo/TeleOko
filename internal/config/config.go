@@ -3,6 +3,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -16,19 +17,31 @@ type Config struct {
 	} `json:"server"`
 
 	Hikvision struct {
-		IP            string   `json:"ip"`
-		Username      string   `json:"username"`
-		Password      string   `json:"password"`
-		PreferredIPs  []string `json:"preferred_ips"`  // Предпочтительные IP-адреса камер
-		AutoDiscovery bool     `json:"auto_discovery"` // Включить автоматическое обнаружение камер
-		ScanInterval  int      `json:"scan_interval"`  // Интервал сканирования в минутах
+		IP       string `json:"ip"`
+		Username string `json:"username"`
+		Password string `json:"password"`
+		Port     int    `json:"port"`
 	} `json:"hikvision"`
+
+	Go2RTC struct {
+		Port    int  `json:"port"`
+		Enabled bool `json:"enabled"`
+	} `json:"go2rtc"`
 
 	Auth struct {
 		Enabled  bool   `json:"enabled"`
 		Username string `json:"username"`
 		Password string `json:"password"`
 	} `json:"auth"`
+
+	Channels []Channel `json:"channels"`
+}
+
+// Channel представляет канал камеры
+type Channel struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	URL  string `json:"url"`
 }
 
 // Глобальная переменная для хранения конфигурации
@@ -39,22 +52,25 @@ var defaultConfig = Config{
 	Server: struct {
 		Port int `json:"port"`
 	}{
-		Port: 8080,
+		Port: 8082,
 	},
 	Hikvision: struct {
-		IP            string   `json:"ip"`
-		Username      string   `json:"username"`
-		Password      string   `json:"password"`
-		PreferredIPs  []string `json:"preferred_ips"`
-		AutoDiscovery bool     `json:"auto_discovery"`
-		ScanInterval  int      `json:"scan_interval"`
+		IP       string `json:"ip"`
+		Username string `json:"username"`
+		Password string `json:"password"`
+		Port     int    `json:"port"`
 	}{
-		IP:            "192.168.8.15",
-		Username:      "admin",
-		Password:      "oborotni2447",
-		PreferredIPs:  []string{},
-		AutoDiscovery: true,
-		ScanInterval:  5,
+		IP:       "192.168.8.5",
+		Username: "admin",
+		Password: "oborotni2447",
+		Port:     554,
+	},
+	Go2RTC: struct {
+		Port    int  `json:"port"`
+		Enabled bool `json:"enabled"`
+	}{
+		Port:    1984,
+		Enabled: true,
 	},
 	Auth: struct {
 		Enabled  bool   `json:"enabled"`
@@ -65,6 +81,17 @@ var defaultConfig = Config{
 		Username: "admin",
 		Password: "password",
 	},
+	Channels: []Channel{
+		{ID: "1", Name: "Общий план", URL: ""},
+		{ID: "201", Name: "Камера 1 (HD)", URL: ""},
+		{ID: "202", Name: "Камера 1 (SD)", URL: ""},
+		{ID: "301", Name: "Камера 2 (HD)", URL: ""},
+		{ID: "302", Name: "Камера 2 (SD)", URL: ""},
+		{ID: "401", Name: "Камера 3 (HD)", URL: ""},
+		{ID: "402", Name: "Камера 3 (SD)", URL: ""},
+		{ID: "501", Name: "Камера 4 (HD)", URL: ""},
+		{ID: "502", Name: "Камера 4 (SD)", URL: ""},
+	},
 }
 
 // Load загружает конфигурацию из файла или использует значения по умолчанию
@@ -73,7 +100,6 @@ func Load() (*Config, error) {
 	configPaths := []string{
 		"config.json",
 		filepath.Join("config", "config.json"),
-		filepath.Join("..", "config", "config.json"),
 	}
 
 	var configFile string
@@ -90,95 +116,99 @@ func Load() (*Config, error) {
 		data, err := ioutil.ReadFile(configFile)
 		if err != nil {
 			log.Printf("Ошибка чтения файла конфигурации: %v", err)
-			return &defaultConfig, nil
+			GlobalConfig = defaultConfig
+			generateChannelURLs()
+			return &GlobalConfig, nil
 		}
 
 		var config Config
 		if err := json.Unmarshal(data, &config); err != nil {
 			log.Printf("Ошибка разбора файла конфигурации: %v", err)
-			return &defaultConfig, nil
+			GlobalConfig = defaultConfig
+			generateChannelURLs()
+			return &GlobalConfig, nil
 		}
 
 		GlobalConfig = config
+		generateChannelURLs()
 		return &config, nil
 	}
 
 	// Если файл не найден, создаем его с настройками по умолчанию
 	log.Println("Файл конфигурации не найден, создание файла с настройками по умолчанию")
 
-	// Создаем директорию config, если ее нет
-	if err := os.MkdirAll("config", 0755); err != nil {
-		log.Printf("Ошибка создания директории config: %v", err)
-	}
-
-	// Сериализуем конфигурацию по умолчанию в JSON
-	data, err := json.MarshalIndent(defaultConfig, "", "    ")
-	if err != nil {
-		log.Printf("Ошибка сериализации конфигурации: %v", err)
-	} else {
-		// Записываем в файл
-		if err := ioutil.WriteFile(filepath.Join("config", "config.json"), data, 0644); err != nil {
-			log.Printf("Ошибка записи файла конфигурации: %v", err)
-		}
-	}
-
 	GlobalConfig = defaultConfig
-	return &defaultConfig, nil
+	generateChannelURLs()
+
+	// Сохраняем конфигурацию
+	if err := Save(); err != nil {
+		log.Printf("Ошибка сохранения конфигурации: %v", err)
+	}
+
+	return &GlobalConfig, nil
 }
 
-// GetCameraCredentials возвращает учетные данные для камеры
-func GetCameraCredentials() (string, string) {
-	return GlobalConfig.Hikvision.Username, GlobalConfig.Hikvision.Password
+// generateChannelURLs генерирует RTSP URL для каналов
+func generateChannelURLs() {
+	baseURL := fmt.Sprintf("rtsp://%s:%s@%s:%d/Streaming/Channels/",
+		GlobalConfig.Hikvision.Username,
+		GlobalConfig.Hikvision.Password,
+		GlobalConfig.Hikvision.IP,
+		GlobalConfig.Hikvision.Port)
+
+	for i := range GlobalConfig.Channels {
+		if GlobalConfig.Channels[i].URL == "" {
+			GlobalConfig.Channels[i].URL = baseURL + GlobalConfig.Channels[i].ID
+		}
+	}
 }
 
 // Save сохраняет текущую конфигурацию в файл
 func Save() error {
+	// Создаем директорию config, если ее нет
+	if err := os.MkdirAll("config", 0755); err != nil {
+		return err
+	}
+
 	// Сериализуем конфигурацию в JSON
 	data, err := json.MarshalIndent(GlobalConfig, "", "    ")
 	if err != nil {
 		return err
 	}
 
-	// Создаем директорию config, если ее нет
-	if err := os.MkdirAll("config", 0755); err != nil {
-		return err
-	}
-
 	// Записываем в файл
-	return ioutil.WriteFile(filepath.Join("config", "config.json"), data, 0644)
+	return ioutil.WriteFile("config.json", data, 0644)
 }
 
-// GetPreferredCameraIPs возвращает список предпочтительных IP-адресов камер
-func GetPreferredCameraIPs() []string {
-	return GlobalConfig.Hikvision.PreferredIPs
+// GetChannels возвращает список каналов
+func GetChannels() []Channel {
+	return GlobalConfig.Channels
 }
 
-// AddPreferredCameraIP добавляет IP-адрес в список предпочтительных
-func AddPreferredCameraIP(ip string) error {
-	// Проверяем, есть ли уже такой IP в списке
-	for _, existingIP := range GlobalConfig.Hikvision.PreferredIPs {
-		if existingIP == ip {
-			return nil // IP уже есть в списке
+// GetChannelByID возвращает канал по ID
+func GetChannelByID(id string) *Channel {
+	for i := range GlobalConfig.Channels {
+		if GlobalConfig.Channels[i].ID == id {
+			return &GlobalConfig.Channels[i]
 		}
 	}
-
-	// Добавляем IP в список
-	GlobalConfig.Hikvision.PreferredIPs = append(GlobalConfig.Hikvision.PreferredIPs, ip)
-
-	// Сохраняем конфигурацию
-	return Save()
+	return nil
 }
 
-// IsAutoDiscoveryEnabled возвращает, включено ли автоматическое обнаружение камер
-func IsAutoDiscoveryEnabled() bool {
-	return GlobalConfig.Hikvision.AutoDiscovery
+// GetHikvisionCredentials возвращает учетные данные для Hikvision
+func GetHikvisionCredentials() (string, string, string, int) {
+	return GlobalConfig.Hikvision.IP,
+		GlobalConfig.Hikvision.Username,
+		GlobalConfig.Hikvision.Password,
+		GlobalConfig.Hikvision.Port
 }
 
-// GetScanInterval возвращает интервал сканирования в минутах
-func GetScanInterval() int {
-	interval := GlobalConfig.Hikvision.ScanInterval
-	if interval < 1 {
-		return 5 // Минимальный интервал 1 минута, по умолчанию 5 минут
-	}
-	return interval
+// GetGo2RTCPort возвращает порт go2rtc
+func GetGo2RTCPort() int {
+	return GlobalConfig.Go2RTC.Port
+}
+
+// IsGo2RTCEnabled проверяет, включен ли go2rtc
+func IsGo2RTCEnabled() bool {
+	return GlobalConfig.Go2RTC.Enabled
 }

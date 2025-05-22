@@ -6,17 +6,165 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"TeleOko/internal/config"
+	"TeleOko/internal/go2rtc"
 	"TeleOko/internal/handlers"
-	"TeleOko/internal/network"
 
 	"github.com/gin-gonic/gin"
 )
 
-// Получение локального IP-адреса
+func main() {
+	log.Println("🚀 Запуск TeleOko - Система видеонаблюдения")
+
+	// Загрузка конфигурации
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Ошибка загрузки конфигурации: %v", err)
+	}
+	log.Println("✅ Конфигурация загружена")
+
+	// Получение IP-адреса сервера
+	ip, err := getLocalIP()
+	if err != nil {
+		log.Printf("⚠️ Ошибка определения IP сервера: %v", err)
+		ip = "127.0.0.1"
+	}
+	log.Printf("🌐 IP-адрес сервера: %s", ip)
+
+	// Запуск go2rtc если включен
+	var go2rtcManager *go2rtc.Manager
+	if config.IsGo2RTCEnabled() {
+		log.Println("🎥 Запуск go2rtc...")
+		go2rtcManager = go2rtc.NewManager()
+		if err := go2rtcManager.Start(); err != nil {
+			log.Fatalf("❌ Ошибка запуска go2rtc: %v", err)
+		}
+		log.Println("✅ go2rtc успешно запущен")
+
+		// Добавляем потоки
+		time.Sleep(3 * time.Second) // Ждем полного запуска go2rtc
+		if err := go2rtcManager.UpdateStreams(); err != nil {
+			log.Printf("⚠️ Ошибка обновления потоков: %v", err)
+		}
+	}
+
+	// Настройка Gin
+	if os.Getenv("GIN_MODE") != "debug" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+	r := gin.Default()
+
+	// Настройка CORS для WebRTC
+	r.Use(func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	})
+
+	// Статические файлы и шаблоны
+	r.Static("/static", "./web/static")
+	r.LoadHTMLGlob("web/templates/*")
+
+	// Главная страница
+	r.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.html", gin.H{
+			"ip":       ip,
+			"channels": config.GetChannels(),
+		})
+	})
+
+	// API группа
+	api := r.Group("/api")
+	{
+		// Информация о системе
+		api.GET("/info", handlers.GetSystemInfo)
+
+		// Проверка соединения
+		api.GET("/ping", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{"status": "ok", "timestamp": time.Now().Unix()})
+		})
+
+		// Работа с каналами
+		api.GET("/channels", handlers.GetChannels)
+
+		// Прямой эфир
+		api.GET("/stream/:channel", handlers.GetLiveStream)
+		api.POST("/webrtc/offer", handlers.HandleWebRTCOffer)
+
+		// Архивные записи
+		api.GET("/recordings", handlers.GetRecordings)
+		api.GET("/playback-url", handlers.GetPlaybackURL)
+		api.POST("/webrtc/offer/playback", handlers.HandlePlaybackWebRTC)
+
+		// Снимки (если понадобятся)
+		api.GET("/snapshot/:channel", handlers.GetSnapshot)
+
+		// Тестирование подключения к камере
+		api.GET("/test-connection", handlers.TestCameraConnection)
+
+		// Проксирование запросов к go2rtc
+		if go2rtcManager != nil {
+			api.Any("/go2rtc/*path", handlers.ProxyToGo2RTC)
+		}
+	}
+
+	// Обработка сигналов завершения
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		log.Println("\n🛑 Получен сигнал завершения...")
+
+		// Остановка go2rtc
+		if go2rtcManager != nil {
+			log.Println("⏹️ Остановка go2rtc...")
+			if err := go2rtcManager.Stop(); err != nil {
+				log.Printf("⚠️ Ошибка остановки go2rtc: %v", err)
+			}
+		}
+
+		log.Println("👋 TeleOko завершен")
+		os.Exit(0)
+	}()
+
+	// Запуск веб-сервера
+	log.Printf("🌍 Запуск веб-сервера на порту %d", cfg.Server.Port)
+	log.Printf("🔗 Откройте браузер: http://localhost:%d", cfg.Server.Port)
+	log.Printf("🔗 Или по сети: http://%s:%d", ip, cfg.Server.Port)
+
+	if err := r.Run(fmt.Sprintf(":%d", cfg.Server.Port)); err != nil {
+		log.Fatalf("❌ Ошибка запуска сервера: %v", err)
+	}
+}
+
+// getLocalIP получает локальный IP-адрес
 func getLocalIP() (string, error) {
+	// Создаем UDP соединение для определения локального IP
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		// Если не удалось, пробуем через интерфейсы
+		return getLocalIPFromInterfaces()
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP.String(), nil
+}
+
+// getLocalIPFromInterfaces получает IP через сетевые интерфейсы
+func getLocalIPFromInterfaces() (string, error) {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		return "", err
@@ -31,173 +179,4 @@ func getLocalIP() (string, error) {
 	}
 
 	return "127.0.0.1", nil
-}
-
-func main() {
-	r := gin.Default()
-
-	// Загрузка конфигурации
-	cfg, err := config.Load()
-	if err != nil {
-		log.Printf("Ошибка загрузки конфигурации: %v", err)
-	} else {
-		log.Println("Конфигурация успешно загружена")
-	}
-
-	// Получение IP-адреса сервера
-	ip, err := getLocalIP()
-	if err != nil {
-		log.Printf("Ошибка определения IP сервера: %v", err)
-		ip = "127.0.0.1"
-	}
-	log.Printf("IP-адрес сервера: %s", ip)
-
-	// Запуск автоматического обнаружения камер (если включено в конфигурации)
-	if config.IsAutoDiscoveryEnabled() {
-		log.Println("Запуск обнаружения камер...")
-		// Быстрое начальное сканирование
-		cameras := network.FindCameras("", 554, 500*time.Millisecond)
-		if len(cameras) > 0 {
-			log.Printf("Найдено %d камер в сети", len(cameras))
-			for i, camera := range cameras {
-				log.Printf("Камера %d: %s", i+1, camera.IP)
-
-				// Добавляем найденную камеру в список предпочтительных
-				if err := config.AddPreferredCameraIP(camera.IP); err != nil {
-					log.Printf("Ошибка добавления IP в конфигурацию: %v", err)
-				}
-			}
-		} else {
-			log.Println("Камеры не найдены. Будет использоваться конфигурация по умолчанию.")
-			log.Printf("IP-адрес камеры из конфигурации: %s", cfg.Hikvision.IP)
-		}
-
-		// Запуск периодического сканирования в фоновом режиме
-		// Интервал из конфигурации или по умолчанию 5 минут
-		scanInterval := time.Duration(config.GetScanInterval()) * time.Minute
-		network.StartCameraDiscovery(scanInterval)
-	} else {
-		log.Println("Автоматическое обнаружение камер отключено в конфигурации")
-		log.Printf("Используется IP-адрес камеры из конфигурации: %s", cfg.Hikvision.IP)
-	}
-
-	// Статические файлы и шаблоны
-	r.Static("/static", "./web/static")
-	r.LoadHTMLGlob("web/templates/*")
-
-	// Главная страница
-	r.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", gin.H{
-			"ip": ip,
-		})
-	})
-
-	// API
-	api := r.Group("/api")
-	{
-		// Информация о системе
-		api.GET("/info", func(c *gin.Context) {
-			// Получаем список обнаруженных камер
-			cameras := network.GetCachedCameras()
-
-			// Получаем текущую активную камеру
-			currentCamera := network.GetDefaultCamera()
-			currentCameraIP := "не определен"
-			if currentCamera != nil {
-				currentCameraIP = currentCamera.IP
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"ip":             ip,
-				"version":        "1.0.0",
-				"status":         "online",
-				"cameras_count":  len(cameras),
-				"current_camera": currentCameraIP,
-			})
-		})
-
-		// Проверка соединения
-		api.GET("/ping", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"status": "ok"})
-		})
-
-		// Список обнаруженных камер
-		api.GET("/cameras", func(c *gin.Context) {
-			cameras := network.GetCachedCameras()
-
-			// Получаем текущую активную камеру
-			currentCamera := network.GetDefaultCamera()
-			currentCameraIP := ""
-			if currentCamera != nil {
-				currentCameraIP = currentCamera.IP
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"cameras":        cameras,
-				"count":          len(cameras),
-				"current_camera": currentCameraIP,
-			})
-		})
-
-		// Запуск ручного поиска камер
-		api.POST("/scan_cameras", func(c *gin.Context) {
-			go network.FindCameras("", 554, 1*time.Second)
-			c.JSON(http.StatusOK, gin.H{
-				"status":  "scanning",
-				"message": "Запущено сканирование камер в фоновом режиме",
-			})
-		})
-
-		// API для работы с архивом и записями
-		api.GET("/recordings", handlers.GetRecordings)
-		api.GET("/playback-url", handlers.GetPlaybackURL)
-
-		// API для работы с прямым эфиром
-		api.GET("/stream/:channel", handlers.GetLiveStream)
-		api.POST("/webrtc/offer", handlers.HandleWebRTCOffer)
-
-		// Заглушка для воспроизведения архива через WebRTC
-		api.POST("/webrtc/offer/playback", func(c *gin.Context) {
-			// Получаем информацию о текущей камере для включения в ответ
-			camera := network.GetDefaultCamera()
-			cameraIP := "неизвестно"
-			if camera != nil {
-				cameraIP = camera.IP
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"type":      "answer",
-				"camera_ip": cameraIP,
-				"sdp":       "v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=msid-semantic: WMS\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:dummy\r\na=ice-pwd:dummy\r\na=fingerprint:sha-256 00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00\r\na=setup:actpass\r\na=mid:0\r\na=extmap:1 urn:ietf:params:rtp-hdrext:toffset\r\na=recvonly\r\na=rtpmap:96 VP8/90000\r\na=rtcp-fb:96 nack\r\na=rtcp-fb:96 nack pli\r\na=rtcp-fb:96 goog-remb\r\n",
-			})
-		})
-
-		// Выбор предпочтительной камеры
-		api.POST("/set_preferred_camera", func(c *gin.Context) {
-			cameraIP := c.PostForm("camera_ip")
-			if cameraIP == "" {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "IP-адрес камеры не указан"})
-				return
-			}
-
-			// Добавляем IP в список предпочтительных в конфигурации
-			err := config.AddPreferredCameraIP(cameraIP)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"status":    "success",
-				"message":   "Предпочтительная камера успешно установлена",
-				"camera_ip": cameraIP,
-			})
-		})
-	}
-
-	// Запуск сервера
-	log.Printf("Запуск сервера на порту %d", cfg.Server.Port)
-	if err := r.Run(fmt.Sprintf(":%d", cfg.Server.Port)); err != nil {
-		log.Fatalf("Ошибка запуска сервера: %v", err)
-	}
 }
