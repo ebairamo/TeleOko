@@ -1,21 +1,19 @@
-// internal/handlers/handlers.go
 package handlers
 
 import (
 	"TeleOko/internal/config"
 	"TeleOko/internal/hikvision"
 	"TeleOko/internal/network"
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // GetSystemInfo возвращает информацию о системе
@@ -38,11 +36,7 @@ func GetSystemInfo(c *gin.Context) {
 func GetChannels(c *gin.Context) {
 	channels := config.GetChannels()
 
-	// Логируем все доступные каналы с их RTSP URL
 	log.Printf("📺 Запрос списка каналов - всего доступно: %d каналов", len(channels))
-	for _, channel := range channels {
-		log.Printf("  📹 [%s] %s -> %s", channel.ID, channel.Name, channel.URL)
-	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"channels": channels,
@@ -54,43 +48,27 @@ func GetChannels(c *gin.Context) {
 func GetLiveStream(c *gin.Context) {
 	channelID := c.Param("channel")
 	if channelID == "" {
-		log.Printf("❌ Запрос прямого эфира без указания канала")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Канал не указан"})
 		return
 	}
 
-	// Проверяем, существует ли канал
 	channel := config.GetChannelByID(channelID)
 	if channel == nil {
-		log.Printf("❌ Запрос несуществующего канала: %s", channelID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Канал не найден"})
 		return
 	}
 
-	// Детальное логирование
-	log.Printf("🔴 ПРЯМОЙ ЭФИР - Запрос канала %s", channelID)
-	log.Printf("  📹 Название: %s", channel.Name)
-	log.Printf("  🌐 RTSP URL: %s", channel.URL)
-	log.Printf("  🎥 go2rtc включен: %t", config.IsGo2RTCEnabled())
+	log.Printf("🔴 ПРЯМОЙ ЭФИР - Запрос канала %s (%s)", channelID, channel.Name)
 
-	// Если go2rtc включен, возвращаем WebRTC URL
 	if config.IsGo2RTCEnabled() {
-		go2rtcURL := fmt.Sprintf("http://localhost:%d/api/ws?src=%s",
-			config.GetGo2RTCPort(), channelID)
-
-		log.Printf("  ✅ WebRTC URL: %s", go2rtcURL)
-
+		// Возвращаем информацию для WebRTC
 		c.JSON(http.StatusOK, gin.H{
 			"channel":      channelID,
 			"channel_name": channel.Name,
-			"webrtc_url":   go2rtcURL,
-			"rtsp_url":     channel.URL,
 			"type":         "webrtc",
+			"rtsp_url":     channel.URL,
 		})
 	} else {
-		// Возвращаем только RTSP URL
-		log.Printf("  ⚠️ go2rtc отключен, используется только RTSP")
-
 		c.JSON(http.StatusOK, gin.H{
 			"channel":      channelID,
 			"channel_name": channel.Name,
@@ -100,66 +78,57 @@ func GetLiveStream(c *gin.Context) {
 	}
 }
 
-// HandleWebRTCOffer обрабатывает WebRTC предложения для прямого эфира
+// HandleWebRTCOffer обрабатывает WebRTC offer и проксирует его к go2rtc
 func HandleWebRTCOffer(c *gin.Context) {
 	channelID := c.Query("channel")
 	if channelID == "" {
-		log.Printf("❌ WebRTC запрос без указания канала")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Канал не указан"})
 		return
 	}
 
-	// Получаем информацию о канале для логирования
-	channel := config.GetChannelByID(channelID)
-	rtspURL := "неизвестен"
-	if channel != nil {
-		rtspURL = channel.URL
-	}
-
-	log.Printf("🎯 WebRTC OFFER - Канал %s", channelID)
-	log.Printf("  🌐 RTSP источник: %s", rtspURL)
-
-	// Проверяем, включен ли go2rtc
 	if !config.IsGo2RTCEnabled() {
-		log.Printf("  ❌ go2rtc отключен - WebRTC недоступен")
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": "WebRTC сервис недоступен",
-		})
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "WebRTC сервис недоступен"})
 		return
 	}
 
-	// Читаем SDP предложение из тела запроса
-	var offerData map[string]interface{}
-	if err := c.ShouldBindJSON(&offerData); err != nil {
-		log.Printf("  ❌ Ошибка чтения SDP offer: %v", err)
+	// Читаем offer от клиента
+	var offer map[string]interface{}
+	if err := c.ShouldBindJSON(&offer); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат данных"})
 		return
 	}
 
-	// Пытаемся проксировать запрос к go2rtc
-	go2rtcURL := fmt.Sprintf("http://localhost:%d/api/webrtc", config.GetGo2RTCPort())
-	log.Printf("  🔄 Проксирование к go2rtc: %s", go2rtcURL)
+	log.Printf("🎯 WebRTC OFFER для канала %s", channelID)
 
-	// Формируем запрос к go2rtc
-	requestBody := map[string]interface{}{
-		"type":  "webrtc",
-		"value": offerData,
-		"src":   channelID,
+	// Создаем URL для go2rtc API
+	go2rtcURL := fmt.Sprintf("http://localhost:%d/api/webrtc?src=%s", config.GetGo2RTCPort(), channelID)
+
+	// Отправляем offer к go2rtc
+	jsonData, err := json.Marshal(offer)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка обработки данных"})
+		return
 	}
 
-	// Отправляем запрос к go2rtc (упрощенная версия)
-	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := http.Post(go2rtcURL, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("❌ Ошибка отправки к go2rtc: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка подключения к go2rtc"})
+		return
+	}
+	defer resp.Body.Close()
 
-	// Пока возвращаем базовый SDP ответ
-	// В полной реализации здесь должен быть HTTP POST к go2rtc
-	log.Printf("  ✅ WebRTC соединение для канала %s (RTSP: %s)", channelID, rtspURL)
-	_ = client      // используем переменную
-	_ = requestBody // используем переменную
+	// Читаем ответ от go2rtc
+	var answer map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&answer); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка чтения ответа"})
+		return
+	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"type": "answer",
-		"sdp":  generateWebRTCSDP(channelID),
-	})
+	log.Printf("✅ WebRTC answer получен для канала %s", channelID)
+
+	// Возвращаем answer клиенту
+	c.JSON(http.StatusOK, answer)
 }
 
 // GetRecordings получает список архивных записей
@@ -169,42 +138,28 @@ func GetRecordings(c *gin.Context) {
 	endDate := c.Query("end")
 
 	if channelID == "" || startDate == "" {
-		log.Printf("❌ Запрос архива без обязательных параметров")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Не указаны обязательные параметры (channel, start)",
 		})
 		return
 	}
 
-	// Если конечная дата не указана, используем начальную
 	if endDate == "" {
 		endDate = startDate
 	}
 
-	// Получаем информацию о канале для логирования
-	channel := config.GetChannelByID(channelID)
-	rtspURL := "неизвестен"
-	channelName := "Неизвестный канал"
-	if channel != nil {
-		rtspURL = channel.URL
-		channelName = channel.Name
-	}
+	log.Printf("📼 ПОИСК АРХИВА - Канал %s, период: %s - %s", channelID, startDate, endDate)
 
-	log.Printf("📼 ПОИСК АРХИВА - Канал %s (%s)", channelID, channelName)
-	log.Printf("  📅 Период: %s - %s", startDate, endDate)
-	log.Printf("  🌐 RTSP источник: %s", rtspURL)
-
-	// Поиск записей через Hikvision API
 	recordings, err := hikvision.SearchRecordings(channelID, startDate, endDate)
 	if err != nil {
-		log.Printf("  ❌ Ошибка поиска записей: %v", err)
+		log.Printf("❌ Ошибка поиска записей: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("Ошибка поиска записей: %v", err),
 		})
 		return
 	}
 
-	log.Printf("  ✅ Найдено записей: %d", len(recordings))
+	log.Printf("✅ Найдено записей: %d", len(recordings))
 
 	c.JSON(http.StatusOK, gin.H{
 		"recordings": recordings,
@@ -222,16 +177,13 @@ func GetPlaybackURL(c *gin.Context) {
 	endTime := c.Query("end")
 
 	if channelID == "" || startTime == "" {
-		log.Printf("❌ Запрос URL воспроизведения без обязательных параметров")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Не указаны обязательные параметры (channel, start)",
 		})
 		return
 	}
 
-	// Если конечное время не указано, добавляем час к начальному
 	if endTime == "" {
-		// Парсим время и добавляем 1 час
 		if t, err := time.Parse("2006-01-02T15:04:05Z", startTime); err == nil {
 			endTime = t.Add(time.Hour).Format("2006-01-02T15:04:05Z")
 		} else {
@@ -239,30 +191,15 @@ func GetPlaybackURL(c *gin.Context) {
 		}
 	}
 
-	// Получаем информацию о канале для логирования
-	channel := config.GetChannelByID(channelID)
-	channelName := "Неизвестный канал"
-	liveRTSP := "неизвестен"
-	if channel != nil {
-		channelName = channel.Name
-		liveRTSP = channel.URL
-	}
+	log.Printf("📺 АРХИВНОЕ ВОСПРОИЗВЕДЕНИЕ - Канал %s, время: %s - %s", channelID, startTime, endTime)
 
-	log.Printf("📺 АРХИВНОЕ ВОСПРОИЗВЕДЕНИЕ - Канал %s (%s)", channelID, channelName)
-	log.Printf("  ⏰ Время: %s - %s", startTime, endTime)
-	log.Printf("  🌐 Базовый RTSP: %s", liveRTSP)
-
-	// Получаем URL для воспроизведения
 	playbackURL, err := hikvision.GetPlaybackURL(channelID, startTime, endTime)
 	if err != nil {
-		log.Printf("  ❌ Ошибка получения URL: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("Ошибка получения URL: %v", err),
 		})
 		return
 	}
-
-	log.Printf("  ✅ Архивный RTSP URL: %s", playbackURL)
 
 	c.JSON(http.StatusOK, gin.H{
 		"url":        playbackURL,
@@ -281,31 +218,19 @@ func HandlePlaybackWebRTC(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
-		log.Printf("❌ WebRTC Playback: ошибка чтения данных - %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат данных"})
 		return
 	}
 
 	log.Printf("🎯 WebRTC PLAYBACK запрос")
-	log.Printf("  🌐 Архивный URL: %s", requestData.URL)
 
-	// Генерируем уникальный ID для потока архива
-	streamID := "playbook_" + uuid.New().String()
-	log.Printf("  🆔 Stream ID: %s", streamID)
-
-	// Если go2rtc включен, возвращаем SDP ответ
 	if config.IsGo2RTCEnabled() {
-		log.Printf("  ✅ go2rtc включен - возвращаем WebRTC ответ")
 		c.JSON(http.StatusOK, gin.H{
-			"type":      "answer",
-			"stream_id": streamID,
-			"sdp":       generateDummySDP(),
+			"error": "Воспроизведение архива через WebRTC пока не поддерживается",
 		})
 	} else {
-		// Заглушка для случая, когда go2rtc отключен
-		log.Printf("  ❌ go2rtc отключен - WebRTC недоступен")
 		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": "WebRTC сервис недоступен для воспроизведения архива",
+			"error": "WebRTC сервис недоступен",
 		})
 	}
 }
@@ -314,36 +239,20 @@ func HandlePlaybackWebRTC(c *gin.Context) {
 func GetSnapshot(c *gin.Context) {
 	channelID := c.Param("channel")
 	if channelID == "" {
-		log.Printf("❌ Запрос снимка без указания канала")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Канал не указан"})
 		return
 	}
 
-	// Получаем информацию о канале для логирования
-	channel := config.GetChannelByID(channelID)
-	channelName := "Неизвестный канал"
-	rtspURL := "неизвестен"
-	if channel != nil {
-		channelName = channel.Name
-		rtspURL = channel.URL
-	}
+	log.Printf("📸 СНИМОК - Канал %s", channelID)
 
-	log.Printf("📸 СНИМОК - Канал %s (%s)", channelID, channelName)
-	log.Printf("  🌐 RTSP источник: %s", rtspURL)
-
-	// Получаем снимок через Hikvision API
 	imageData, err := hikvision.GetSnapshot(channelID)
 	if err != nil {
-		log.Printf("  ❌ Ошибка получения снимка: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("Ошибка получения снимка: %v", err),
 		})
 		return
 	}
 
-	log.Printf("  ✅ Снимок получен, размер: %d байт", len(imageData))
-
-	// Возвращаем изображение
 	c.Header("Content-Type", "image/jpeg")
 	c.Header("Content-Length", strconv.Itoa(len(imageData)))
 	c.Data(http.StatusOK, "image/jpeg", imageData)
@@ -351,15 +260,8 @@ func GetSnapshot(c *gin.Context) {
 
 // TestCameraConnection тестирует подключение к камере
 func TestCameraConnection(c *gin.Context) {
-	ip, username, _, port := config.GetHikvisionCredentials()
-
-	log.Printf("🔍 ТЕСТ ПОДКЛЮЧЕНИЯ к камере")
-	log.Printf("  🌐 IP: %s:%d", ip, port)
-	log.Printf("  👤 Пользователь: %s", username)
-
 	err := network.TestCameraConnection()
 	if err != nil {
-		log.Printf("  ❌ Ошибка подключения: %v", err)
 		c.JSON(http.StatusServiceUnavailable, gin.H{
 			"status": "error",
 			"error":  err.Error(),
@@ -367,7 +269,6 @@ func TestCameraConnection(c *gin.Context) {
 		return
 	}
 
-	log.Printf("  ✅ Подключение к камере успешно")
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "ok",
 		"message": "Подключение к камере успешно",
@@ -376,55 +277,39 @@ func TestCameraConnection(c *gin.Context) {
 
 // ProxyToGo2RTC проксирует запросы к go2rtc
 func ProxyToGo2RTC(c *gin.Context) {
-	// Создаем URL для go2rtc
-	targetURL := fmt.Sprintf("http://localhost:%d", config.GetGo2RTCPort())
-	target, err := url.Parse(targetURL)
+	// Простое проксирование
+	targetURL := fmt.Sprintf("http://localhost:%d%s", config.GetGo2RTCPort(), c.Request.URL.Path)
+
+	// Создаем новый запрос
+	req, err := http.NewRequest(c.Request.Method, targetURL, c.Request.Body)
 	if err != nil {
-		log.Printf("❌ Ошибка конфигурации прокси go2rtc: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка конфигурации прокси"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка создания запроса"})
 		return
 	}
 
-	// Логируем проксирование
-	originalPath := c.Request.URL.Path
-	log.Printf("🔄 ПРОКСИ к go2rtc: %s -> %s%s", originalPath, targetURL, strings.TrimPrefix(originalPath, "/api/go2rtc"))
+	// Копируем заголовки
+	for key, values := range c.Request.Header {
+		for _, value := range values {
+			req.Header.Add(key, value)
+		}
+	}
 
-	// Создаем reverse proxy
-	proxy := httputil.NewSingleHostReverseProxy(target)
+	// Выполняем запрос
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка выполнения запроса"})
+		return
+	}
+	defer resp.Body.Close()
 
-	// Модифицируем путь запроса
-	c.Request.URL.Path = strings.TrimPrefix(originalPath, "/api/go2rtc")
+	// Копируем ответ
+	for key, values := range resp.Header {
+		for _, value := range values {
+			c.Header(key, value)
+		}
+	}
 
-	// Выполняем проксирование
-	proxy.ServeHTTP(c.Writer, c.Request)
-}
-
-// generateWebRTCSDP генерирует SDP ответ для WebRTC
-func generateWebRTCSDP(channelID string) string {
-	return fmt.Sprintf(`v=0
-o=- %d 0 IN IP4 127.0.0.1
-s=TeleOko Stream %s
-t=0 0
-a=group:BUNDLE 0
-a=msid-semantic: WMS
-m=video 9 UDP/TLS/RTP/SAVPF 96
-c=IN IP4 0.0.0.0
-a=rtcp:9 IN IP4 0.0.0.0
-a=ice-ufrag:teleoko%s
-a=ice-pwd:teleoko%s123
-a=fingerprint:sha-256 AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99
-a=setup:actpass
-a=mid:0
-a=extmap:1 urn:ietf:params:rtp-hdrext:toffset
-a=recvonly
-a=rtpmap:96 VP8/90000
-a=rtcp-fb:96 nack
-a=rtcp-fb:96 nack pli
-a=rtcp-fb:96 goog-remb`,
-		time.Now().Unix(), channelID, channelID, channelID)
-}
-
-// generateDummySDP генерирует базовую заглушку SDP ответа
-func generateDummySDP() string {
-	return generateWebRTCSDP("default")
+	c.Status(resp.StatusCode)
+	io.Copy(c.Writer, resp.Body)
 }
