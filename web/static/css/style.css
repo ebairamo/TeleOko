@@ -110,7 +110,7 @@ main {
     gap: 15px;
 }
 
-select, input[type="date"] {
+select, input[type="date"], input[type="text"] {
     width: 100%;
     padding: 12px 10px;
     border: 1px solid #ddd;
@@ -120,7 +120,7 @@ select, input[type="date"] {
     transition: border-color 0.3s, box-shadow 0.3s;
 }
 
-select:focus, input[type="date"]:focus {
+select:focus, input[type="date"]:focus, input[type="text"]:focus {
     border-color: #3498db;
     outline: none;
     box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
@@ -202,7 +202,55 @@ select:focus, input[type="date"]:focus {
 #video-container video {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    background-color: #000;
+}
+
+/* Полноэкранный режим */
+#video-container:fullscreen {
+    height: 100vh;
+    border-radius: 0;
+}
+
+#video-container:fullscreen video {
+    object-fit: contain;
+}
+
+/* Контролы видео */
+.video-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#video-container:hover .video-controls {
+    opacity: 1;
+}
+
+.control-btn {
+    background-color: rgba(0, 0, 0, 0.7);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.control-btn:hover {
+    background-color: rgba(0, 0, 0, 0.9);
+}
+
+.control-btn svg {
+    fill: white;
 }
 
 .placeholder {
@@ -222,8 +270,28 @@ select:focus, input[type="date"]:focus {
     color: #487eb0;
 }
 
+/* Информационная панель видео */
+.video-info-panel {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.video-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 /* Временная шкала */
-.timeline-container, .recordings-container {
+.timeline-container {
     background-color: #fff;
     border-radius: 8px;
     padding: 20px;
@@ -232,51 +300,92 @@ select:focus, input[type="date"]:focus {
 
 .timeline {
     position: relative;
-    height: 60px;
-    background-color: #f1f2f6;
+    min-height: 80px;
+    background-color: #f8f9fa;
     border-radius: 4px;
     margin-top: 10px;
     overflow: hidden;
+    padding-top: 25px;
 }
 
-.timeline-empty, .recordings-empty {
+.timeline-inner {
+    position: relative;
+    height: 60px;
+}
+
+.timeline-empty {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100%;
     color: #a4b0be;
     font-size: 14px;
-}
-
-.timeline-container h3, .recordings-container h3 {
-    margin-bottom: 15px;
-    font-size: 16px;
-    color: #34495e;
+    padding: 20px;
 }
 
 .time-label {
     position: absolute;
-    top: -18px;
+    top: -20px;
     transform: translateX(-50%);
-    font-size: 10px;
+    font-size: 11px;
     color: #7f8c8d;
+    font-weight: 500;
+}
+
+.hour-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #e0e0e0;
 }
 
 .timeline-segment {
     position: absolute;
-    height: 20px;
-    top: 20px;
+    height: 30px;
+    top: 15px;
     background-color: #3498db;
     cursor: pointer;
-    border-radius: 2px;
-    transition: background-color 0.2s;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .timeline-segment:hover {
     background-color: #2980b9;
+    transform: scaleY(1.2);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.current-time-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e74c3c;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.current-time-indicator::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -4px;
+    width: 10px;
+    height: 10px;
+    background: #e74c3c;
+    border-radius: 50%;
 }
 
 /* Список записей */
+.recordings-container {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
 .recordings-list {
     max-height: 300px;
     overflow-y: auto;
@@ -305,6 +414,7 @@ select:focus, input[type="date"]:focus {
 .recording-info {
     display: flex;
     flex-direction: column;
+    gap: 4px;
 }
 
 .recording-time {
@@ -317,68 +427,14 @@ select:focus, input[type="date"]:focus {
     color: #7f8c8d;
 }
 
-.recording-item .play-btn {
+.recording-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.play-btn {
     padding: 8px 15px;
     font-size: 12px;
-}
-
-/* Модальное окно снимка */
-.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    z-index: 1000;
-    overflow: auto;
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-content {
-    background-color: #fff;
-    margin: auto;
-    padding: 25px;
-    border-radius: 8px;
-    width: 80%;
-    max-width: 800px;
-    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
-    position: relative;
-}
-
-.close-btn {
-    position: absolute;
-    top: 15px;
-    right: 20px;
-    font-size: 28px;
-    color: #7f8c8d;
-    cursor: pointer;
-    transition: color 0.2s;
-}
-
-.close-btn:hover {
-    color: #e74c3c;
-}
-
-.snapshot-container {
-    margin: 20px 0;
-    text-align: center;
-}
-
-#snapshotImage {
-    max-width: 100%;
-    max-height: 600px;
-    border-radius: 4px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.modal-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 20px;
 }
 
 /* Индикатор загрузки */
@@ -475,9 +531,14 @@ footer p {
         height: 300px;
     }
     
-    .modal-content {
-        width: 95%;
-        padding: 15px;
+    .video-controls {
+        bottom: 10px;
+        right: 10px;
+    }
+    
+    .control-btn {
+        width: 35px;
+        height: 35px;
     }
 }
 
@@ -489,6 +550,7 @@ footer p {
     height: 100%;
     color: #a4b0be;
     font-size: 14px;
+    padding: 20px;
 }
 
 .loading::after {
@@ -502,7 +564,60 @@ footer p {
     animation: spin 1s linear infinite;
 }
 
-/* Стили для скачивания */
-#downloadLink {
-    display: none;
+/* Информация о воспроизведении архива */
+.playback-info-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 20px;
+}
+
+.playback-info {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    max-width: 600px;
+    text-align: center;
+}
+
+.playback-info h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.playback-info p {
+    margin: 10px 0;
+    line-height: 1.6;
+}
+
+.playback-info code {
+    word-break: break-all;
+    background: #f5f5f5;
+    padding: 10px;
+    border-radius: 4px;
+    display: block;
+    margin: 10px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+}
+
+/* Скроллбар для записей */
+.recordings-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.recordings-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.recordings-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.recordings-list::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }

@@ -1,5 +1,5 @@
 /**
- * TeleOko v2.0 - Полностью исправленный JavaScript
+ * TeleOko v2.0 - JavaScript с полноэкранным режимом
  * Система видеонаблюдения с поддержкой WebRTC
  */
 
@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentStream = null;
     let recordings = [];
     let connectionStatus = 'offline';
+    let isFullscreen = false;
     
     // Установка текущей даты по умолчанию (формат dd.mm.yyyy)
     const today = new Date();
@@ -106,6 +107,84 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
+     * Переключение полноэкранного режима
+     */
+    function toggleFullscreen() {
+        if (!isFullscreen) {
+            if (videoContainer.requestFullscreen) {
+                videoContainer.requestFullscreen();
+            } else if (videoContainer.webkitRequestFullscreen) {
+                videoContainer.webkitRequestFullscreen();
+            } else if (videoContainer.mozRequestFullScreen) {
+                videoContainer.mozRequestFullScreen();
+            } else if (videoContainer.msRequestFullscreen) {
+                videoContainer.msRequestFullscreen();
+            }
+            isFullscreen = true;
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+            isFullscreen = false;
+        }
+    }
+    
+    /**
+     * Добавление кнопок управления на видео
+     */
+    function addVideoControls(container) {
+        // Создаем контейнер для кнопок
+        const controlsDiv = document.createElement('div');
+        controlsDiv.className = 'video-controls';
+        controlsDiv.innerHTML = `
+            <button class="control-btn fullscreen-btn" title="Полноэкранный режим">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                    <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                </svg>
+            </button>
+            <button class="control-btn snapshot-btn" title="Сделать снимок">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                    <circle cx="12" cy="12" r="3.2"/>
+                    <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+                </svg>
+            </button>
+        `;
+        
+        container.appendChild(controlsDiv);
+        
+        // Обработчики кнопок
+        controlsDiv.querySelector('.fullscreen-btn').addEventListener('click', toggleFullscreen);
+        controlsDiv.querySelector('.snapshot-btn').addEventListener('click', () => {
+            const channelId = cameraSelect.value;
+            if (channelId) takeSnapshot(channelId);
+        });
+        
+        // Показываем/скрываем контролы при наведении
+        let hideTimeout;
+        container.addEventListener('mouseenter', () => {
+            clearTimeout(hideTimeout);
+            controlsDiv.style.opacity = '1';
+        });
+        
+        container.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                controlsDiv.style.opacity = '0';
+            }, 2000);
+        });
+        
+        // Двойной клик для полноэкранного режима
+        if (currentVideoElement) {
+            currentVideoElement.addEventListener('dblclick', toggleFullscreen);
+        }
+    }
+    
+    /**
      * Запуск прямого эфира
      */
     async function startLiveStream() {
@@ -156,13 +235,13 @@ document.addEventListener('DOMContentLoaded', function() {
             videoElement.style.width = '100%';
             videoElement.style.height = '100%';
             videoElement.style.objectFit = 'contain';
+            videoElement.style.backgroundColor = '#000';
             
-            // Настройка WebRTC с несколькими STUN серверами
+            // Настройка WebRTC
             const pc = new RTCPeerConnection({
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' }
+                    { urls: 'stun:stun1.l.google.com:19302' }
                 ],
                 iceCandidatePoolSize: 10
             });
@@ -176,38 +255,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     videoElement.srcObject = event.streams[0];
                     currentStream = event.streams[0];
                     updateConnectionStatus('online');
-                    
-                    // Добавляем обработчик загрузки метаданных
-                    videoElement.onloadedmetadata = function() {
-                        console.log('📐 Видео размер: ' + videoElement.videoWidth + 'x' + videoElement.videoHeight);
-                    };
                 }
             };
             
             pc.oniceconnectionstatechange = function() {
                 console.log('🔌 ICE состояние:', pc.iceConnectionState);
-                const connectionStates = {
-                    'checking': 'Подключение...',
-                    'connected': 'Подключено',
-                    'completed': 'Подключено', 
-                    'disconnected': 'Отключено',
-                    'failed': 'Ошибка подключения',
-                    'closed': 'Соединение закрыто'
-                };
-                
-                const statusText = connectionStates[pc.iceConnectionState] || pc.iceConnectionState;
-                console.log('📡 Статус: ' + statusText);
                 
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
                     updateConnectionStatus('online');
-                } else if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
+                } else if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
                     updateConnectionStatus('offline');
-                }
-            };
-            
-            pc.onicecandidate = function(event) {
-                if (event.candidate) {
-                    console.log('🧊 ICE кандидат:', event.candidate.type);
                 }
             };
             
@@ -217,12 +274,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Создаем SDP offer
             const offer = await pc.createOffer({
                 offerToReceiveVideo: true,
-                offerToReceiveAudio: false,
-                voiceActivityDetection: false
+                offerToReceiveAudio: false
             });
             
             await pc.setLocalDescription(offer);
-            console.log('📋 SDP Offer создан');
             
             // Отправляем offer на сервер
             const response = await fetch('/api/webrtc/offer?channel=' + channelId, {
@@ -237,11 +292,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             if (!response.ok) {
-                throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                throw new Error('HTTP ' + response.status);
             }
             
             const answer = await response.json();
-            console.log('📨 Получен SDP Answer');
             
             if (answer.error) {
                 throw new Error(answer.error);
@@ -253,10 +307,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     type: answer.type || 'answer',
                     sdp: answer.sdp
                 }));
-                console.log('✅ WebRTC соединение настроено');
             }
             
-            // Добавляем видео в контейнер
+            // Очищаем контейнер и добавляем видео
             videoContainer.innerHTML = '';
             videoContainer.appendChild(videoElement);
             currentVideoElement = videoElement;
@@ -268,23 +321,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 '<div class="video-info">' +
                     '<span>📺 ' + (streamData.channel_name || 'Канал ' + channelId) + '</span>' +
                     '<span>🔴 Прямой эфир</span>' +
-                    '<span id="video-quality">📐 Загрузка...</span>' +
                 '</div>';
             videoContainer.appendChild(infoPanel);
             
-            // Обновляем информацию о качестве видео
-            videoElement.addEventListener('loadedmetadata', function() {
-                const qualityInfo = document.getElementById('video-quality');
-                if (qualityInfo) {
-                    qualityInfo.textContent = '📐 ' + videoElement.videoWidth + 'x' + videoElement.videoHeight;
-                }
-            });
-            
-            // Добавляем обработчик ошибок видео
-            videoElement.addEventListener('error', function(e) {
-                console.error('❌ Ошибка видео:', e);
-                updateConnectionStatus('offline');
-            });
+            // Добавляем контролы
+            addVideoControls(videoContainer);
             
         } catch (error) {
             console.error('❌ WebRTC ошибка:', error);
@@ -352,7 +393,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Ошибка поиска записей:', error);
             showError(recordingsList, 'Не удалось найти записи: ' + error.message);
-            showError(timeline, 'Ошибка загрузки временной шкалы: ' + error.message);
+            showError(timeline, 'Ошибка загрузки временной шкалы');
         } finally {
             hideLoading();
         }
@@ -369,7 +410,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Сортируем записи по времени (новые сначала)
+        // Сортируем записи по времени
         recordings.sort(function(a, b) {
             return new Date(b.StartTime) - new Date(a.StartTime);
         });
@@ -386,10 +427,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 '<div class="recording-info">' +
                     '<span class="recording-time">📅 ' + startTime + '</span>' +
                     '<span class="recording-duration">⏱️ ' + duration + '</span>' +
-                    '<span class="recording-end">🏁 ' + endTime + '</span>' +
                 '</div>' +
                 '<div class="recording-actions">' +
-                    '<button class="play-btn primary-btn" onclick="playRecording(\'' + recording.StartTime + '\', \'' + recording.EndTime + '\', \'' + recording.Channel + '\')">' +
+                    '<button class="play-btn primary-btn" onclick="playRecording(\'' + 
+                        recording.StartTime + '\', \'' + recording.EndTime + '\', \'' + recording.Channel + '\')">' +
                         '▶️ Воспроизвести' +
                     '</button>' +
                 '</div>';
@@ -411,25 +452,37 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Создаем контейнер временной шкалы
         const timelineContainer = document.createElement('div');
-        timelineContainer.className = 'timeline-container';
+        timelineContainer.className = 'timeline-inner';
         timelineContainer.style.position = 'relative';
-        timelineContainer.style.height = '80px';
+        timelineContainer.style.height = '60px';
         timelineContainer.style.background = '#f5f5f5';
         timelineContainer.style.borderRadius = '4px';
-        timelineContainer.style.overflow = 'hidden';
         
-        // Добавляем часовые метки
-        for (let hour = 0; hour < 24; hour += 2) {
-            const timeLabel = document.createElement('div');
-            timeLabel.className = 'time-label';
-            timeLabel.style.position = 'absolute';
-            timeLabel.style.left = ((hour / 24) * 100) + '%';
-            timeLabel.style.top = '5px';
-            timeLabel.style.fontSize = '10px';
-            timeLabel.style.color = '#666';
-            timeLabel.style.transform = 'translateX(-50%)';
-            timeLabel.textContent = hour.toString().padStart(2, '0') + ':00';
-            timelineContainer.appendChild(timeLabel);
+        // Добавляем сетку времени
+        for (let hour = 0; hour < 24; hour++) {
+            const hourLine = document.createElement('div');
+            hourLine.className = 'hour-line';
+            hourLine.style.position = 'absolute';
+            hourLine.style.left = ((hour / 24) * 100) + '%';
+            hourLine.style.top = '0';
+            hourLine.style.bottom = '0';
+            hourLine.style.width = '1px';
+            hourLine.style.background = '#ddd';
+            timelineContainer.appendChild(hourLine);
+            
+            // Метки времени каждые 3 часа
+            if (hour % 3 === 0) {
+                const timeLabel = document.createElement('div');
+                timeLabel.className = 'time-label';
+                timeLabel.style.position = 'absolute';
+                timeLabel.style.left = ((hour / 24) * 100) + '%';
+                timeLabel.style.top = '-20px';
+                timeLabel.style.fontSize = '11px';
+                timeLabel.style.color = '#666';
+                timeLabel.style.transform = 'translateX(-50%)';
+                timeLabel.textContent = hour.toString().padStart(2, '0') + ':00';
+                timelineContainer.appendChild(timeLabel);
+            }
         }
         
         // Отображаем записи на шкале
@@ -453,14 +506,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 segment.style.left = Math.max(0, startPosition) + '%';
                 segment.style.width = Math.min(width, 100 - startPosition) + '%';
                 segment.style.height = '30px';
-                segment.style.top = '35px';
-                segment.style.background = 'hsl(' + ((index * 137.5) % 360) + ', 70%, 50%)';
+                segment.style.top = '15px';
+                segment.style.background = '#3498db';
                 segment.style.cursor = 'pointer';
-                segment.style.borderRadius = '2px';
-                segment.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3)';
+                segment.style.borderRadius = '3px';
+                segment.style.transition = 'all 0.2s';
                 
-                // Добавляем всплывающую подсказку
-                segment.title = formatDateTime(recording.StartTime) + ' - ' + formatDateTime(recording.EndTime);
+                // Всплывающая подсказка
+                const tooltip = formatDateTime(recording.StartTime) + ' - ' + formatDateTime(recording.EndTime);
+                segment.title = tooltip;
+                
+                // Эффект при наведении
+                segment.addEventListener('mouseenter', function() {
+                    segment.style.background = '#2980b9';
+                    segment.style.transform = 'scaleY(1.2)';
+                });
+                
+                segment.addEventListener('mouseleave', function() {
+                    segment.style.background = '#3498db';
+                    segment.style.transform = 'scaleY(1)';
+                });
                 
                 // Обработчик клика
                 segment.onclick = function() {
@@ -471,6 +536,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
+        // Индикатор текущего времени
+        const now = new Date();
+        if (now.toDateString() === dayStart.toDateString()) {
+            const currentTimePosition = ((now - dayStart) / dayDuration) * 100;
+            const currentTimeIndicator = document.createElement('div');
+            currentTimeIndicator.className = 'current-time-indicator';
+            currentTimeIndicator.style.position = 'absolute';
+            currentTimeIndicator.style.left = currentTimePosition + '%';
+            currentTimeIndicator.style.top = '0';
+            currentTimeIndicator.style.bottom = '0';
+            currentTimeIndicator.style.width = '2px';
+            currentTimeIndicator.style.background = '#e74c3c';
+            currentTimeIndicator.style.zIndex = '10';
+            timelineContainer.appendChild(currentTimeIndicator);
+        }
+        
         timeline.appendChild(timelineContainer);
     }
     
@@ -479,11 +560,11 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     window.playRecording = async function(startTime, endTime, channelId) {
         showLoading('Загрузка архивной записи...');
-        stopCurrentStream();
         
+        // Пока показываем RTSP URL, так как WebRTC для архива требует дополнительной настройки
         try {
-            // Получаем URL для воспроизведения
-            const response = await fetch('/api/playback-url?channel=' + channelId + '&start=' + startTime + '&end=' + endTime);
+            const response = await fetch('/api/playback-url?channel=' + channelId + 
+                '&start=' + startTime + '&end=' + endTime);
             
             if (!response.ok) {
                 throw new Error('HTTP ' + response.status);
@@ -506,9 +587,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         '<code style="word-break: break-all; background: #f5f5f5; padding: 10px; border-radius: 4px; display: block; margin: 10px 0;">' +
                             data.url +
                         '</code>' +
-                        '<p><em>💡 Используйте VLC Player для воспроизведения этого URL</em></p>' +
+                        '<p><em>💡 Используйте VLC Player для воспроизведения</em></p>' +
                         '<button onclick="copyToClipboard(\'' + data.url + '\')" class="primary-btn" style="margin-top: 10px;">' +
                             '📋 Копировать URL' +
+                        '</button>' +
+                        '<button onclick="location.reload()" class="secondary-btn" style="margin-top: 10px; margin-left: 10px;">' +
+                            '🔙 Вернуться' +
                         '</button>' +
                     '</div>' +
                 '</div>';
@@ -546,7 +630,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.execCommand('copy');
             alert('URL скопирован в буфер обмена!');
         } catch (err) {
-            alert('Не удалось скопировать URL. Скопируйте вручную.');
+            alert('Не удалось скопировать URL');
         }
         document.body.removeChild(textArea);
     }
@@ -554,11 +638,13 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * Получение снимка с камеры
      */
-    async function takeSnapshot() {
-        const channelId = cameraSelect.value;
+    async function takeSnapshot(channelId) {
         if (!channelId) {
-            alert('Выберите канал для создания снимка');
-            return;
+            channelId = cameraSelect.value;
+            if (!channelId) {
+                alert('Выберите канал для создания снимка');
+                return;
+            }
         }
         
         try {
@@ -569,11 +655,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error('HTTP ' + response.status);
             }
             
-            // Создаем blob из ответа
             const blob = await response.blob();
             const imageUrl = URL.createObjectURL(blob);
             
-            // Создаем ссылку для скачивания
             const link = document.createElement('a');
             link.href = imageUrl;
             link.download = 'snapshot_' + channelId + '_' + new Date().toISOString().replace(/[:.]/g, '-') + '.jpg';
@@ -581,17 +665,83 @@ document.addEventListener('DOMContentLoaded', function() {
             link.click();
             document.body.removeChild(link);
             
-            // Освобождаем память
             URL.revokeObjectURL(imageUrl);
             
-            alert('Снимок сохранен!');
+            hideLoading();
             
         } catch (error) {
             console.error('Ошибка создания снимка:', error);
             alert('Не удалось создать снимок: ' + error.message);
-        } finally {
             hideLoading();
         }
+    }
+    
+    /**
+     * Обработчик изменения полноэкранного режима
+     */
+    document.addEventListener('fullscreenchange', function() {
+        isFullscreen = !!document.fullscreenElement;
+    });
+    
+    document.addEventListener('webkitfullscreenchange', function() {
+        isFullscreen = !!document.webkitFullscreenElement;
+    });
+    
+    /**
+     * Инициализация обработчиков событий
+     */
+    function initEventHandlers() {
+        // Кнопка прямого эфира
+        if (liveBtn) {
+            liveBtn.addEventListener('click', startLiveStream);
+        }
+        
+        // Кнопка снимка
+        if (snapshotBtn) {
+            snapshotBtn.addEventListener('click', () => takeSnapshot());
+        }
+        
+        // Кнопка поиска записей
+        if (searchBtn) {
+            searchBtn.addEventListener('click', searchRecordings);
+        }
+        
+        // Enter в поле даты
+        if (archiveDate) {
+            archiveDate.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchRecordings();
+                }
+            });
+        }
+        
+        // Обработка закрытия страницы
+        window.addEventListener('beforeunload', function() {
+            stopCurrentStream();
+        });
+        
+        // Клавиатурные сокращения
+        document.addEventListener('keydown', function(e) {
+            // F - полноэкранный режим
+            if (e.key === 'f' || e.key === 'F') {
+                if (currentVideoElement && !e.target.matches('input, textarea')) {
+                    toggleFullscreen();
+                }
+            }
+            // Escape - выход из полноэкранного режима
+            if (e.key === 'Escape' && isFullscreen) {
+                toggleFullscreen();
+            }
+            // Space - пауза/воспроизведение
+            if (e.key === ' ' && currentVideoElement && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                if (currentVideoElement.paused) {
+                    currentVideoElement.play();
+                } else {
+                    currentVideoElement.pause();
+                }
+            }
+        });
     }
     
     /**
@@ -609,38 +759,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             updateConnectionStatus('offline');
         }
-    }
-    
-    /**
-     * Инициализация обработчиков событий
-     */
-    function initEventHandlers() {
-        // Кнопка прямого эфира
-        if (liveBtn) {
-            liveBtn.addEventListener('click', startLiveStream);
-        }
-        
-        // Кнопка снимка
-        if (snapshotBtn) {
-            snapshotBtn.addEventListener('click', takeSnapshot);
-        }
-        
-        // Кнопка поиска записей
-        if (searchBtn) {
-            searchBtn.addEventListener('click', searchRecordings);
-        }
-        
-        // Обработка закрытия страницы
-        window.addEventListener('beforeunload', function() {
-            stopCurrentStream();
-        });
-        
-        // Предотвращение разрыва соединения при неактивности
-        setInterval(function() {
-            if (currentRTCPeerConnection && connectionStatus === 'online') {
-                fetch('/api/ping').catch(function() {});
-            }
-        }, 30000);
     }
     
     // Инициализация приложения
