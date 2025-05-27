@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeleOko v2.0 - Система видеонаблюдения</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📹</text></svg>">
+    <style>
+        /* Дополнительные стили для новой версии */
+        .video-info-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .video-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .playback-info-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 20px;
+        }
+        
+        .playback-info {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            max-width: 600px;
+            text-align: center;
+        }
+        
+        .playback-info h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        .playback-info p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        
+        .timeline-container {
+            position: relative;
+            margin: 10px 0;
+        }
+        
+        .recording-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .recording-end {
+            font-size: 11px;
+            color: #7f8c8d;
+        }
+        
+        /* Мобильная адаптация */
+        @media (max-width: 768px) {
+            .video-info-panel {
+                font-size: 10px;
+                padding: 6px 8px;
+            }
+            
+            .playback-info {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .recording-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .recording-actions {
+                width: 100%;
+            }
+            
+            .recording-actions .play-btn {
+                width: 100%;
+            }
+        }
+        
+        /* Улучшенная анимация загрузки */
+        .loading::after {
+            content: "";
+            width: 16px;
+            height: 16px;
+            margin-left: 8px;
+            border: 2px solid #3498db;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Стили для временной шкалы */
+        .timeline-segment:hover {
+            transform: scaleY(1.2);
+            transition: transform 0.2s ease;
+        }
+        
+        /* Стили для placeholder */
+        .placeholder {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        
+        .placeholder-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        
+        .placeholder h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .placeholder p {
+            color: #7f8c8d;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <h1>📹 TeleOko v2.0</h1>
+        </div>
+        <div class="system-info">
+            <span>🌐 IP: {{.ip}}</span>
+            <span class="connection-status offline">🔴 Подключение...</span>
+        </div>
+    </header>
+
+    <main>
+        <div class="sidebar">
+            <div class="camera-controls">
+                <h2>📺 Камеры</h2>
+                <select id="cameraSelect">
+                    <option value="">Выберите канал...</option>
+                    {{range .channels}}
+                    <option value="{{.ID}}">{{.Name}}</option>
+                    {{end}}
+                </select>
+                <div class="buttons">
+                    <button id="liveBtn" class="primary-btn">🔴 Прямой эфир</button>
+                    <button id="snapshotBtn" class="secondary-btn">📸 Снимок</button>
+                </div>
+            </div>
+
+            <div class="archive-controls">
+                <h2>📼 Архив</h2>
+                <div class="date-picker">
+                    <label for="archiveDate">📅 Дата (дд.мм.гггг):</label>
+                    <input type="text" id="archiveDate" placeholder="дд.мм.гггг" pattern="\d{2}\.\d{2}\.\d{4}">
+                    <small style="color: #7f8c8d; font-size: 11px; margin-top: 5px; display: block;">
+                        Формат: 25.01.2025
+                    </small>
+                </div>
+                <button id="searchBtn" class="primary-btn">🔍 Поиск записей</button>
+            </div>
+            
+            <div class="system-status" style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                <h3 style="margin-bottom: 10px; font-size: 14px;">ℹ️ Статус системы</h3>
+                <div id="systemInfo" style="font-size: 12px; color: #666;">
+                    <p>🔄 Проверка статуса...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="video-container">
+                <div class="placeholder">
+                    <div class="placeholder-icon">📹</div>
+                    <h3>Загрузка TeleOko...</h3>
+                    <p>Инициализация системы видеонаблюдения</p>
+                </div>
+            </div>
+
+            <div class="timeline-container">
+                <h3>📊 Временная шкала</h3>
+                <div id="timeline" class="timeline">
+                    <div class="timeline-empty">Выберите дату и нажмите "Поиск записей"</div>
+                </div>
+            </div>
+
+            <div class="recordings-container">
+                <h3>📋 Список записей</h3>
+                <div id="recordingsList" class="recordings-list">
+                    <div class="recordings-empty">Выберите дату и нажмите "Поиск записей"</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Индикатор загрузки -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p id="loadingMessage">Загрузка...</p>
+    </div>
+
+    <footer>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <p>&copy; 2025 TeleOko v2.0 - Система видеонаблюдения</p>
+                <p style="font-size: 12px; opacity: 0.8;">Полностью переработанная версия с WebRTC поддержкой</p>
+            </div>
+            <div style="text-align: right;">
+                <p style="font-size: 12px;">🎯 Функции:</p>
+                <p style="font-size: 11px; opacity: 0.8;">
+                    ✅ WebRTC стрим • ✅ Поиск архива • ✅ Снимки • ✅ Мобильная версия
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Скрипты -->
+    <script src="/static/js/main.js"></script>
+    
+    <script>
+        // Дополнительная инициализация для отображения системной информации
+        document.addEventListener('DOMContentLoaded', function() {
+            const systemInfo = document.getElementById('systemInfo');
+            
+            // Периодическое обновление системной информации
+            async function updateSystemInfo() {
+                try {
+                    const response = await fetch('/api/info');
+                    if (response.ok) {
+                        const data = await response.json();
+                        systemInfo.innerHTML = `
+                            <p>📊 Версия: ${data.version}</p>
+                            <p>📹 Каналов: ${data.channels_count}</p>
+                            <p>🎥 go2rtc: ${data.go2rtc_enabled ? '✅ Включен' : '❌ Отключен'}</p>
+                            <p>⏰ ${new Date().toLocaleTimeString('ru-RU')}</p>
+                        `;
+                    } else {
+                        systemInfo.innerHTML = '<p>❌ Ошибка получения статуса</p>';
+                    }
+                } catch (error) {
+                    systemInfo.innerHTML = '<p>🔌 Нет соединения с сервером</p>';
+                }
+            }
+            
+            // Обновляем сразу и потом каждые 30 секунд
+            updateSystemInfo();
+            setInterval(updateSystemInfo, 30000);
+            
+            // Улучшенная валидация даты
+            const archiveDate = document.getElementById('archiveDate');
+            if (archiveDate) {
+                archiveDate.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, ''); // Только цифры
+                    
+                    if (value.length >= 2) {
+                        value = value.slice(0, 2) + '.' + value.slice(2);
+                    }
+                    if (value.length >= 5) {
+                        value = value.slice(0, 5) + '.' + value.slice(5, 9);
+                    }
+                    
+                    e.target.value = value;
+                });
+                
+                archiveDate.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        document.getElementById('searchBtn').click();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
