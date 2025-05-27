@@ -19,6 +19,7 @@ import (
 )
 
 func main() {
+<<<<<<< HEAD
 	log.Println("🚀 Запуск TeleOko v2.0 - Система видеонаблюдения с автообнаружением")
 	log.Println("=====================================================================")
 
@@ -26,6 +27,14 @@ func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("❌ Ошибка загрузки конфигурации: %v", err)
+=======
+	log.Println("🚀 Запуск TeleOko - Система видеонаблюдения")
+
+	// Загрузка конфигурации
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Ошибка загрузки конфигурации: %v", err)
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
 	}
 	log.Println("✅ Конфигурация загружена")
 
@@ -40,6 +49,7 @@ func main() {
 	// Запуск go2rtc если включен
 	var go2rtcManager *go2rtc.Manager
 	if config.IsGo2RTCEnabled() {
+<<<<<<< HEAD
 		log.Println("🎥 Инициализация go2rtc...")
 		go2rtcManager = go2rtc.NewManager()
 
@@ -64,6 +74,20 @@ func main() {
 		}
 	} else {
 		log.Println("📺 go2rtc отключен - система будет работать только с RTSP URL")
+=======
+		log.Println("🎥 Запуск go2rtc...")
+		go2rtcManager = go2rtc.NewManager()
+		if err := go2rtcManager.Start(); err != nil {
+			log.Fatalf("❌ Ошибка запуска go2rtc: %v", err)
+		}
+		log.Println("✅ go2rtc успешно запущен")
+
+		// Добавляем потоки
+		time.Sleep(3 * time.Second) // Ждем полного запуска go2rtc
+		if err := go2rtcManager.UpdateStreams(); err != nil {
+			log.Printf("⚠️ Ошибка обновления потоков: %v", err)
+		}
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
 	}
 
 	// Настройка Gin
@@ -92,6 +116,7 @@ func main() {
 
 	// Главная страница
 	r.GET("/", func(c *gin.Context) {
+<<<<<<< HEAD
 		// Получаем актуальную информацию о камере
 		cameraIP, _, _, _ := config.GetHikvisionCredentials()
 
@@ -99,6 +124,11 @@ func main() {
 			"ip":        ip,
 			"camera_ip": cameraIP,
 			"channels":  config.GetChannels(),
+=======
+		c.HTML(http.StatusOK, "index.html", gin.H{
+			"ip":       ip,
+			"channels": config.GetChannels(),
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
 		})
 	})
 
@@ -110,12 +140,16 @@ func main() {
 
 		// Проверка соединения
 		api.GET("/ping", func(c *gin.Context) {
+<<<<<<< HEAD
 			cameraIP, _, _, _ := config.GetHikvisionCredentials()
 			c.JSON(http.StatusOK, gin.H{
 				"status":    "ok",
 				"timestamp": time.Now().Unix(),
 				"camera_ip": cameraIP,
 			})
+=======
+			c.JSON(http.StatusOK, gin.H{"status": "ok", "timestamp": time.Now().Unix()})
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
 		})
 
 		// Работа с каналами
@@ -130,12 +164,17 @@ func main() {
 		api.GET("/playback-url", handlers.GetPlaybackURL)
 		api.POST("/webrtc/offer/playback", handlers.HandlePlaybackWebRTC)
 
+<<<<<<< HEAD
 		// Снимки
+=======
+		// Снимки (если понадобятся)
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
 		api.GET("/snapshot/:channel", handlers.GetSnapshot)
 
 		// Тестирование подключения к камере
 		api.GET("/test-connection", handlers.TestCameraConnection)
 
+<<<<<<< HEAD
 		// Ручное обновление IP камеры
 		api.POST("/update-camera-ip", func(c *gin.Context) {
 			var request struct {
@@ -207,6 +246,8 @@ func main() {
 			})
 		})
 
+=======
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
 		// Проксирование запросов к go2rtc
 		if go2rtcManager != nil {
 			api.Any("/go2rtc/*path", handlers.ProxyToGo2RTC)
@@ -232,6 +273,7 @@ func main() {
 		os.Exit(0)
 	}()
 
+<<<<<<< HEAD
 	// Отображение информации о запуске
 	cameraIP, username, _, _ := config.GetHikvisionCredentials()
 	channels := config.GetChannels()
@@ -256,6 +298,13 @@ func main() {
 	log.Println()
 
 	// Запуск веб-сервера
+=======
+	// Запуск веб-сервера
+	log.Printf("🌍 Запуск веб-сервера на порту %d", cfg.Server.Port)
+	log.Printf("🔗 Откройте браузер: http://localhost:%d", cfg.Server.Port)
+	log.Printf("🔗 Или по сети: http://%s:%d", ip, cfg.Server.Port)
+
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
 	if err := r.Run(fmt.Sprintf(":%d", cfg.Server.Port)); err != nil {
 		log.Fatalf("❌ Ошибка запуска сервера: %v", err)
 	}

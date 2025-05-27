@@ -3,11 +3,18 @@
         "port": 8082
     },
     "hikvision": {
+<<<<<<< HEAD
         "ip": "192.168.8.10",
         "username": "admin",
         "password": "oborotni2447",
         "port": 554,
         "auto_detect": false
+=======
+        "ip": "192.168.8.5",
+        "username": "admin",
+        "password": "oborotni2447",
+        "port": 554
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
     },
     "go2rtc": {
         "port": 1984,
@@ -22,167 +29,299 @@
         {
             "id": "1",
             "name": "🎥 Общий план",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "101",
             "name": "📹 Камера 1 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/101"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/101"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "102",
             "name": "📹 Камера 1 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/102"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/102"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "201",
             "name": "📹 Камера 2 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/201"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/201"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "202",
             "name": "📹 Камера 2 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/202"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/202"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "301",
             "name": "📹 Камера 3 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/301"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/301"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "302",
             "name": "📹 Камера 3 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/302"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/302"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "401",
             "name": "📹 Камера 4 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/401"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/401"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "402",
             "name": "📹 Камера 4 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/402"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/402"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "501",
             "name": "📹 Камера 5 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/501"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/501"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "502",
             "name": "📹 Камера 5 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/502"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/502"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "601",
             "name": "📹 Камера 6 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/601"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/601"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "602",
             "name": "📹 Камера 6 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/602"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/602"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "701",
             "name": "📹 Камера 7 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/701"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/701"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "702",
             "name": "📹 Камера 7 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/702"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/702"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "801",
             "name": "📹 Камера 8 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/801"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/801"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "802",
             "name": "📹 Камера 8 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/802"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/802"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "901",
             "name": "📹 Камера 9 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/901"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/901"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "902",
             "name": "📹 Камера 9 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/902"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/902"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "1001",
             "name": "📹 Камера 10 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1001"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1001"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "1002",
             "name": "📹 Камера 10 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1002"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1002"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "1101",
             "name": "📹 Камера 11 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1101"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1101"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "1102",
             "name": "📹 Камера 11 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1102"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1102"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "1201",
             "name": "📹 Камера 12 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1201"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1201"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "1202",
             "name": "📹 Камера 12 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1202"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1202"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "1301",
             "name": "📹 Камера 13 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1301"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1301"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "1302",
             "name": "📹 Камера 13 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1302"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1302"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "1401",
             "name": "📹 Камера 14 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1401"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1401"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "1402",
             "name": "📹 Камера 14 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1402"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1402"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "1501",
             "name": "📹 Камера 15 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1501"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1501"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "1502",
             "name": "📹 Камера 15 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1502"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1502"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "1601",
             "name": "📹 Камера 16 (HD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1601"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1601"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         },
         {
             "id": "1602",
             "name": "📹 Камера 16 (SD)",
+<<<<<<< HEAD
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1602"
+=======
+            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1602"
+>>>>>>> 17ac5825c609ebcafbd76fbf2fa91fe09048c1ca
         }
     ]
 }
