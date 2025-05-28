@@ -116,6 +116,7 @@ func main() {
 		if go2rtcManager != nil && go2rtcManager.IsRunning() {
 			api.Any("/go2rtc/*path", handlers.ProxyToGo2RTC)
 		}
+
 	}
 
 	// Обработка сигналов завершения

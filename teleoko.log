@@ -1,234 +1,74 @@
-2025/05/27 19:20:45 🚀 Запуск TeleOko v2.0 - Система видеонаблюдения
-2025/05/27 19:20:45 ================================================
-2025/05/27 19:20:45 ✅ Конфигурация загружена: 16 каналов
-2025/05/27 19:20:45 ✅ Конфигурация загружена
-2025/05/27 19:20:45 🌐 IP-адрес сервера: 192.168.8.4
-2025/05/27 19:20:45 🎥 Инициализация go2rtc...
-2025/05/27 19:20:45 🚀 Запуск go2rtc: /Users/eldar/Downloads/TeleOko-main-2/go2rtc
-19:20:45.234 INF go2rtc platform=darwin/arm64 revision=fa580c5 version=1.9.9
-19:20:45.235 INF config path=/Users/eldar/Downloads/TeleOko-main-2/go2rtc.yaml
-19:20:45.235 INF [api] listen addr=:1984
-19:20:45.235 INF [rtsp] listen addr=:8554
-19:20:45.236 INF [webrtc] listen addr=:1984
-2025/05/27 19:20:48 ✅ go2rtc запущен (PID: 88042)
-2025/05/27 19:20:48 ✅ go2rtc успешно запущен
-2025/05/27 19:20:48 ✅ go2rtc успешно запущен
-2025/05/27 19:20:51 
-2025/05/27 19:20:51 🎉 TeleOko v2.0 готов к работе!
-2025/05/27 19:20:51 ================================
-2025/05/27 19:20:51 🌍 Веб-интерфейс:    http://localhost:8082
-2025/05/27 19:20:51 🌐 По сети:          http://192.168.8.4:8082
-2025/05/27 19:20:51 📺 Каналов:          16
-2025/05/27 19:20:51 🎥 go2rtc:           http://localhost:1984
-2025/05/27 19:20:51 
-[GIN] 2025/05/27 - 19:20:56 | 200 |       254.5µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:20:56 | 200 |     205.792µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:21:26 | 200 |     325.625µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:21:26 | 200 |      208.75µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:21:56 | 200 |     650.667µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:21:56 | 200 |     235.958µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:22:26 | 200 |       454.5µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:22:26 | 200 |     224.416µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:22:56 | 200 |     257.708µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:22:56 | 200 |      150.25µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:23:04 | 200 |     4.69875ms | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/"
-[GIN] 2025/05/27 - 19:23:05 | 200 |   12.266375ms | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/static/css/style.css"
-[GIN] 2025/05/27 - 19:23:05 | 200 |    1.567167ms | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/static/js/main.js"
-[GIN] 2025/05/27 - 19:23:05 | 200 |     541.667µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:23:05 | 200 |     238.833µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-2025/05/27 19:23:08 🔴 ПРЯМОЙ ЭФИР - Запрос канала 102 (📹 Камера 1)
-[GIN] 2025/05/27 - 19:23:08 | 200 |     256.791µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/stream/102"
-2025/05/27 19:23:09 🎯 WebRTC OFFER для канала 102
-2025/05/27 19:23:09 ✅ WebRTC answer получен для канала 102
-[GIN] 2025/05/27 - 19:23:09 | 200 |  300.888458ms | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | POST     "/api/webrtc/offer?channel=102"
-[GIN] 2025/05/27 - 19:23:26 | 200 |      406.25µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:23:26 | 200 |     395.791µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:23:35 | 200 |      58.625µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:23:35 | 200 |     331.083µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:23:35 | 200 |     171.959µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:24:05 | 200 |     110.333µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:24:05 | 200 |     516.208µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:24:05 | 200 |     229.666µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:24:35 | 200 |      90.708µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:24:35 | 200 |     407.958µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:24:35 | 200 |     292.042µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:24:39 | 200 |    1.252459ms |  85.117.127.127 | GET      "/"
-[GIN] 2025/05/27 - 19:24:40 | 200 |     867.291µs |  85.117.127.127 | GET      "/static/css/style.css"
-[GIN] 2025/05/27 - 19:24:40 | 200 |    1.047875ms |  85.117.127.127 | GET      "/static/js/main.js"
-[GIN] 2025/05/27 - 19:24:40 | 200 |         780µs |    66.102.9.234 | GET      "/"
-[GIN] 2025/05/27 - 19:24:41 | 200 |     339.125µs |  85.117.127.127 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:24:41 | 200 |      460.25µs |    66.102.9.227 | GET      "/"
-[GIN] 2025/05/27 - 19:24:41 | 200 |     407.625µs |    66.102.9.234 | GET      "/"
-[GIN] 2025/05/27 - 19:24:41 | 200 |     421.166µs |    66.102.9.233 | GET      "/static/css/style.css"
-[GIN] 2025/05/27 - 19:24:41 | 200 |     327.792µs |  85.117.127.127 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:24:41 | 200 |     335.792µs |    66.102.9.234 | GET      "/static/css/style.css"
-[GIN] 2025/05/27 - 19:24:41 | 200 |     427.917µs |    66.102.9.228 | GET      "/static/js/main.js"
-[GIN] 2025/05/27 - 19:24:41 | 200 |     369.666µs |    66.102.9.234 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:24:42 | 200 |     187.541µs |    66.102.9.232 | GET      "/api/info"
-2025/05/27 19:24:45 🔴 ПРЯМОЙ ЭФИР - Запрос канала 302 (📹 Камера 3)
-[GIN] 2025/05/27 - 19:24:45 | 200 |     142.292µs |  85.117.127.127 | GET      "/api/stream/302"
-2025/05/27 19:24:46 🎯 WebRTC OFFER для канала 302
-2025/05/27 19:24:46 ✅ WebRTC answer получен для канала 302
-[GIN] 2025/05/27 - 19:24:46 | 200 |  143.107375ms |  85.117.127.127 | POST     "/api/webrtc/offer?channel=302"
-[GIN] 2025/05/27 - 19:25:05 | 200 |     205.084µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:25:05 | 200 |     719.625µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:25:05 | 200 |     596.834µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:25:11 | 200 |     236.666µs |  85.117.127.127 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:25:11 | 200 |     424.292µs |  85.117.127.127 | GET      "/api/info"
-2025/05/27 19:25:27 🔴 ПРЯМОЙ ЭФИР - Запрос канала 302 (📹 Камера 3)
-[GIN] 2025/05/27 - 19:25:27 | 200 |     162.583µs |  85.117.127.127 | GET      "/api/stream/302"
-2025/05/27 19:25:28 🎯 WebRTC OFFER для канала 302
-2025/05/27 19:25:28 ✅ WebRTC answer получен для канала 302
-[GIN] 2025/05/27 - 19:25:28 | 200 |  175.575333ms |  85.117.127.127 | POST     "/api/webrtc/offer?channel=302"
-[GIN] 2025/05/27 - 19:25:35 | 200 |      23.292µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:25:35 | 200 |     477.959µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:25:35 | 200 |     272.875µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:25:41 | 200 |     241.625µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:25:42 | 200 |     776.666µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:25:42 | 200 |     320.583µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-2025/05/27 19:25:59 🔴 ПРЯМОЙ ЭФИР - Запрос канала 802 (📹 Камера 8)
-[GIN] 2025/05/27 - 19:25:59 | 200 |     206.833µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/stream/802"
-2025/05/27 19:25:59 🎯 WebRTC OFFER для канала 802
-2025/05/27 19:25:59 ✅ WebRTC answer получен для канала 802
-[GIN] 2025/05/27 - 19:25:59 | 200 |  188.221291ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | POST     "/api/webrtc/offer?channel=802"
-2025/05/27 19:26:04 🔴 ПРЯМОЙ ЭФИР - Запрос канала 902 (📹 Камера 9)
-[GIN] 2025/05/27 - 19:26:04 | 200 |     107.458µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/stream/902"
-2025/05/27 19:26:05 🎯 WebRTC OFFER для канала 902
-2025/05/27 19:26:05 ✅ WebRTC answer получен для канала 902
-[GIN] 2025/05/27 - 19:26:05 | 200 |  154.444834ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | POST     "/api/webrtc/offer?channel=902"
-[GIN] 2025/05/27 - 19:26:05 | 200 |         336µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:26:05 | 200 |     219.334µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:26:05 | 200 |      91.916µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:26:11 | 200 |       184.5µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:26:11 | 200 |     348.917µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:26:11 | 200 |         357µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:26:12 | 200 |     104.417µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:26:12 | 200 |     219.458µs |             ::1 | GET      "/api/info"
-2025/05/27 19:26:17 🔴 ПРЯМОЙ ЭФИР - Запрос канала 1002 (📹 Камера 10)
-[GIN] 2025/05/27 - 19:26:17 | 200 |     224.667µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/stream/1002"
-2025/05/27 19:26:18 🎯 WebRTC OFFER для канала 1002
-2025/05/27 19:26:18 ✅ WebRTC answer получен для канала 1002
-[GIN] 2025/05/27 - 19:26:18 | 200 |  163.344833ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | POST     "/api/webrtc/offer?channel=1002"
-2025/05/27 19:26:22 🔴 ПРЯМОЙ ЭФИР - Запрос канала 1102 (📹 Камера 11)
-[GIN] 2025/05/27 - 19:26:22 | 200 |      70.583µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/stream/1102"
-2025/05/27 19:26:23 🎯 WebRTC OFFER для канала 1102
-2025/05/27 19:26:23 ✅ WebRTC answer получен для канала 1102
-[GIN] 2025/05/27 - 19:26:23 | 200 |  145.437791ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | POST     "/api/webrtc/offer?channel=1102"
-2025/05/27 19:26:32 🔴 ПРЯМОЙ ЭФИР - Запрос канала 1202 (📹 Камера 12)
-[GIN] 2025/05/27 - 19:26:32 | 200 |     241.875µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/stream/1202"
-2025/05/27 19:26:32 🎯 WebRTC OFFER для канала 1202
-2025/05/27 19:26:32 ✅ WebRTC answer получен для канала 1202
-[GIN] 2025/05/27 - 19:26:32 | 200 |  188.943542ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | POST     "/api/webrtc/offer?channel=1202"
-2025/05/27 19:26:37 🔴 ПРЯМОЙ ЭФИР - Запрос канала 1302 (📹 Камера 13)
-[GIN] 2025/05/27 - 19:26:37 | 200 |    1.702167ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/stream/1302"
-2025/05/27 19:26:38 🎯 WebRTC OFFER для канала 1302
-2025/05/27 19:26:38 ✅ WebRTC answer получен для канала 1302
-[GIN] 2025/05/27 - 19:26:38 | 200 |     147.341ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | POST     "/api/webrtc/offer?channel=1302"
-[GIN] 2025/05/27 - 19:26:41 | 200 |      42.625µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:26:41 | 200 |       174.5µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:26:41 | 200 |     350.584µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-2025/05/27 19:26:43 🔴 ПРЯМОЙ ЭФИР - Запрос канала 1402 (📹 Камера 14)
-[GIN] 2025/05/27 - 19:26:43 | 200 |      93.042µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/stream/1402"
-2025/05/27 19:26:44 🎯 WebRTC OFFER для канала 1402
-2025/05/27 19:26:44 ✅ WebRTC answer получен для канала 1402
-[GIN] 2025/05/27 - 19:26:44 | 200 |  162.217792ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | POST     "/api/webrtc/offer?channel=1402"
-2025/05/27 19:26:49 🔴 ПРЯМОЙ ЭФИР - Запрос канала 1502 (📹 Камера 15)
-[GIN] 2025/05/27 - 19:26:49 | 200 |     162.417µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/stream/1502"
-2025/05/27 19:26:50 🎯 WebRTC OFFER для канала 1502
-2025/05/27 19:26:50 ✅ WebRTC answer получен для канала 1502
-[GIN] 2025/05/27 - 19:26:50 | 200 |  167.410792ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | POST     "/api/webrtc/offer?channel=1502"
-2025/05/27 19:26:57 🔴 ПРЯМОЙ ЭФИР - Запрос канала 1602 (📹 Камера 16)
-[GIN] 2025/05/27 - 19:26:57 | 200 |     231.542µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/stream/1602"
-2025/05/27 19:26:58 🎯 WebRTC OFFER для канала 1602
-2025/05/27 19:26:58 ✅ WebRTC answer получен для канала 1602
-[GIN] 2025/05/27 - 19:26:58 | 200 |  165.426291ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | POST     "/api/webrtc/offer?channel=1602"
-2025/05/27 19:27:04 🔴 ПРЯМОЙ ЭФИР - Запрос канала 202 (📹 Камера 2)
-[GIN] 2025/05/27 - 19:27:04 | 200 |       74.25µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/stream/202"
-2025/05/27 19:27:04 🎯 WebRTC OFFER для канала 202
-2025/05/27 19:27:04 ✅ WebRTC answer получен для канала 202
-[GIN] 2025/05/27 - 19:27:04 | 200 |  175.217083ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | POST     "/api/webrtc/offer?channel=202"
-[GIN] 2025/05/27 - 19:27:11 | 200 |     175.833µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:27:11 | 200 |     488.125µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:27:11 | 200 |     303.083µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-2025/05/27 19:27:21 🔴 ПРЯМОЙ ЭФИР - Запрос канала 302 (📹 Камера 3)
-[GIN] 2025/05/27 - 19:27:21 | 200 |     313.667µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/stream/302"
-2025/05/27 19:27:22 🎯 WebRTC OFFER для канала 302
-[GIN] 2025/05/27 - 19:27:22 | 200 |     410.625µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:27:22 | 200 |     283.708µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:27:22 | 200 |     157.209µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/ping"
-2025/05/27 19:27:22 ✅ WebRTC answer получен для канала 302
-[GIN] 2025/05/27 - 19:27:22 | 200 |  155.993834ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | POST     "/api/webrtc/offer?channel=302"
-2025/05/27 19:27:27 🔴 ПРЯМОЙ ЭФИР - Запрос канала 402 (📹 Камера 4)
-[GIN] 2025/05/27 - 19:27:27 | 200 |      72.334µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/stream/402"
-2025/05/27 19:27:27 🎯 WebRTC OFFER для канала 402
-2025/05/27 19:27:28 ✅ WebRTC answer получен для канала 402
-[GIN] 2025/05/27 - 19:27:28 | 200 |  170.163458ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | POST     "/api/webrtc/offer?channel=402"
-[GIN] 2025/05/27 - 19:27:42 | 200 |      136.75µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:27:42 | 200 |     465.917µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:27:42 | 200 |     337.292µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:28:11 | 200 |     237.125µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:28:11 | 200 |     375.208µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-2025/05/27 19:28:11 🔴 ПРЯМОЙ ЭФИР - Запрос канала 802 (📹 Камера 8)
-[GIN] 2025/05/27 - 19:28:11 | 200 |     132.375µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/stream/802"
-[GIN] 2025/05/27 - 19:28:11 | 200 |     370.791µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-2025/05/27 19:28:12 🎯 WebRTC OFFER для канала 802
-2025/05/27 19:28:12 ✅ WebRTC answer получен для канала 802
-[GIN] 2025/05/27 - 19:28:12 | 200 |  151.641083ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | POST     "/api/webrtc/offer?channel=802"
-2025/05/27 19:28:18 🔴 ПРЯМОЙ ЭФИР - Запрос канала 902 (📹 Камера 9)
-[GIN] 2025/05/27 - 19:28:18 | 200 |      70.958µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/stream/902"
-2025/05/27 19:28:18 🎯 WebRTC OFFER для канала 902
-2025/05/27 19:28:18 ✅ WebRTC answer получен для канала 902
-[GIN] 2025/05/27 - 19:28:18 | 200 |  143.065375ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | POST     "/api/webrtc/offer?channel=902"
-[GIN] 2025/05/27 - 19:28:41 | 200 |      31.333µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:28:41 | 200 |     726.375µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:28:41 | 200 |     442.667µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:28:50 | 200 |     371.875µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:28:50 | 200 |     787.083µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:29:11 | 200 |     199.708µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:29:11 | 200 |     794.208µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:29:12 | 200 |     355.417µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:29:16 | 200 |      3.8245ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/"
-[GIN] 2025/05/27 - 19:29:18 | 404 |       5.708µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/favicon.ico"
-[GIN] 2025/05/27 - 19:29:41 | 200 |     200.667µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:29:41 | 200 |      623.75µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:29:42 | 200 |         228µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:29:57 | 200 |         304µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:29:57 | 200 |      77.625µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:29:57 | 200 |      433.75µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:30:12 | 200 |     142.291µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:30:12 | 200 |     264.875µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:30:12 | 200 |     365.667µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:30:41 | 200 |     130.709µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:30:41 | 200 |     327.583µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:30:42 | 200 |     350.458µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:30:46 | 200 |     457.583µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:30:46 | 200 |      20.292µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:30:46 | 200 |     281.208µs | 2a03:32c0:3001:27c5:d484:8f51:d266:269b | GET      "/api/info"
-[GIN] 2025/05/27 - 19:31:11 | 200 |      86.875µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:31:11 | 200 |    3.538584ms | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:31:12 | 200 |     409.083µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:31:41 | 200 |     228.333µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:31:41 | 200 |     463.666µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:31:42 | 200 |     376.041µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:32:11 | 200 |     577.875µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:32:11 | 200 |     604.833µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:32:12 | 200 |     286.833µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:32:41 | 200 |     147.791µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:32:41 | 200 |     415.083µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:32:42 | 200 |     373.458µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:33:07 | 200 |     395.917µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:33:07 | 200 |     401.292µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:33:11 | 200 |      53.042µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:33:11 | 200 |     233.083µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:33:12 | 200 |     352.416µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:33:41 | 200 |      204.75µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:33:41 | 200 |     423.667µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:33:42 | 200 |     450.333µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:34:11 | 200 |      181.75µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:34:11 | 200 |     292.875µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:34:12 | 200 |      293.25µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:34:15 | 200 |     134.834µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:34:15 | 200 |         220µs |             ::1 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:34:41 | 200 |     345.167µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
-[GIN] 2025/05/27 - 19:34:41 | 200 |       80.25µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/ping"
-[GIN] 2025/05/27 - 19:34:42 | 200 |     333.291µs | 2a03:32c0:3001:27c5:2d44:bdb4:d430:d016 | GET      "/api/info"
+2025/05/28 20:38:25 🚀 Запуск TeleOko v2.0 - Система видеонаблюдения
+2025/05/28 20:38:25 ================================================
+2025/05/28 20:38:25 ✅ Конфигурация загружена: 16 каналов
+2025/05/28 20:38:25 ✅ Конфигурация загружена
+2025/05/28 20:38:25 🌐 IP-адрес сервера: 192.168.8.4
+2025/05/28 20:38:25 🎥 Инициализация go2rtc...
+2025/05/28 20:38:25 🚀 Запуск go2rtc: /Users/eldar/Downloads/TeleOko-main-2/go2rtc
+20:38:26.007 INF go2rtc platform=darwin/arm64 revision=fa580c5 version=1.9.9
+20:38:26.007 INF config path=/Users/eldar/Downloads/TeleOko-main-2/go2rtc.yaml
+20:38:26.008 INF [rtsp] listen addr=:8554
+20:38:26.008 INF [api] listen addr=:1984
+20:38:26.009 INF [webrtc] listen addr=:1984
+2025/05/28 20:38:27 ✅ go2rtc запущен (PID: 98070)
+2025/05/28 20:38:27 ✅ go2rtc успешно запущен
+2025/05/28 20:38:27 ✅ go2rtc успешно запущен
+2025/05/28 20:38:30 
+2025/05/28 20:38:30 🎉 TeleOko v2.0 готов к работе!
+2025/05/28 20:38:30 ================================
+2025/05/28 20:38:30 🌍 Веб-интерфейс:    http://localhost:8082
+2025/05/28 20:38:30 🌐 По сети:          http://192.168.8.4:8082
+2025/05/28 20:38:30 📺 Каналов:          16
+2025/05/28 20:38:30 🎥 go2rtc:           http://localhost:1984
+2025/05/28 20:38:30 
+[GIN] 2025/05/28 - 20:38:34 | 200 |      1.2795ms |   85.117.116.69 | GET      "/"
+[GIN] 2025/05/28 - 20:38:35 | 200 |      412.75µs |   85.117.116.69 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:38:35 | 200 |     826.042µs |   85.117.116.69 | GET      "/api/info"
+2025/05/28 20:38:38 🔴 ПРЯМОЙ ЭФИР - Запрос канала 202 (📹 Камера 2)
+[GIN] 2025/05/28 - 20:38:38 | 200 |     125.416µs |   85.117.116.69 | GET      "/api/stream/202"
+2025/05/28 20:38:38 🎯 WebRTC OFFER для канала 202: {
+  "sdp": "v=0\r\no=- 5920760224752602670 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=extmap-allow-mixed\r\na=msid-semantic: WMS\r\nm=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99 100 101 102 125 104 124 106 107 108 109 127 35\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:h0kA\r\na=ice-pwd:68rE8Ojlg6yentzFToLUTcUF\r\na=ice-options:trickle\r\na=fingerprint:sha-256 F9:C0:2F:91:06:4D:C1:4F:75:44:32:32:72:78:B2:6B:A6:F6:6B:57:1D:89:30:69:C0:86:18:D8:CC:0D:6E:3E\r\na=setup:actpass\r\na=mid:0\r\na=extmap:1 urn:ietf:params:rtp-hdrext:toffset\r\na=extmap:2 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\r\na=extmap:3 urn:3gpp:video-orientation\r\na=extmap:4 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01\r\na=extmap:5 http://www.webrtc.org/experiments/rtp-hdrext/playout-delay\r\na=extmap:6 http://www.webrtc.org/experiments/rtp-hdrext/video-content-type\r\na=extmap:7 http://www.webrtc.org/experiments/rtp-hdrext/video-timing\r\na=extmap:8 http://www.webrtc.org/experiments/rtp-hdrext/color-space\r\na=extmap:9 urn:ietf:params:rtp-hdrext:sdes:mid\r\na=extmap:10 urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id\r\na=extmap:11 urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id\r\na=recvonly\r\na=rtcp-mux\r\na=rtcp-rsize\r\na=rtpmap:96 H264/90000\r\na=rtcp-fb:96 goog-remb\r\na=rtcp-fb:96 transport-cc\r\na=rtcp-fb:96 ccm fir\r\na=rtcp-fb:96 nack\r\na=rtcp-fb:96 nack pli\r\na=fmtp:96 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=640c1f\r\na=rtpmap:97 rtx/90000\r\na=fmtp:97 apt=96\r\na=rtpmap:98 H264/90000\r\na=rtcp-fb:98 goog-remb\r\na=rtcp-fb:98 transport-cc\r\na=rtcp-fb:98 ccm fir\r\na=rtcp-fb:98 nack\r\na=rtcp-fb:98 nack pli\r\na=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f\r\na=rtpmap:99 rtx/90000\r\na=fmtp:99 apt=98\r\na=rtpmap:100 H264/90000\r\na=rtcp-fb:100 goog-remb\r\na=rtcp-fb:100 transport-cc\r\na=rtcp-fb:100 ccm fir\r\na=rtcp-fb:100 nack\r\na=rtcp-fb:100 nack pli\r\na=fmtp:100 level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=640c1f\r\na=rtpmap:101 rtx/90000\r\na=fmtp:101 apt=100\r\na=rtpmap:102 H264/90000\r\na=rtcp-fb:102 goog-remb\r\na=rtcp-fb:102 transport-cc\r\na=rtcp-fb:102 ccm fir\r\na=rtcp-fb:102 nack\r\na=rtcp-fb:102 nack pli\r\na=fmtp:102 level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42e01f\r\na=rtpmap:125 rtx/90000\r\na=fmtp:125 apt=102\r\na=rtpmap:104 VP8/90000\r\na=rtcp-fb:104 goog-remb\r\na=rtcp-fb:104 transport-cc\r\na=rtcp-fb:104 ccm fir\r\na=rtcp-fb:104 nack\r\na=rtcp-fb:104 nack pli\r\na=rtpmap:124 rtx/90000\r\na=fmtp:124 apt=104\r\na=rtpmap:106 VP9/90000\r\na=rtcp-fb:106 goog-remb\r\na=rtcp-fb:106 transport-cc\r\na=rtcp-fb:106 ccm fir\r\na=rtcp-fb:106 nack\r\na=rtcp-fb:106 nack pli\r\na=fmtp:106 profile-id=0\r\na=rtpmap:107 rtx/90000\r\na=fmtp:107 apt=106\r\na=rtpmap:108 red/90000\r\na=rtpmap:109 rtx/90000\r\na=fmtp:109 apt=108\r\na=rtpmap:127 ulpfec/90000\r\na=rtpmap:35 flexfec-03/90000\r\na=rtcp-fb:35 goog-remb\r\na=rtcp-fb:35 transport-cc\r\na=fmtp:35 repair-window=10000000\r\n",
+  "type": "offer"
+}
+2025/05/28 20:38:38 🔄 Отправка запроса к go2rtc: http://localhost:1984/api/webrtc?src=202
+2025/05/28 20:38:38 📤 Отправка запроса к go2rtc...
+2025/05/28 20:38:38 📥 Получен ответ от go2rtc: 200 OK
+2025/05/28 20:38:38 ✅ WebRTC answer получен для канала 202: {
+  "sdp": "v=0\r\no=- 3781701014414857885 1748446718 IN IP4 0.0.0.0\r\ns=-\r\nt=0 0\r\na=msid-semantic:WMS*\r\na=fingerprint:sha-256 54:AE:42:51:A8:41:D5:D8:61:3A:65:24:87:BE:01:94:A3:BB:27:AB:F9:80:0B:C2:CC:49:CE:ED:EB:86:D1:AB\r\na=extmap-allow-mixed\r\na=group:BUNDLE 0\r\nm=video 9 UDP/TLS/RTP/SAVPF 98\r\nc=IN IP4 0.0.0.0\r\na=setup:active\r\na=mid:0\r\na=ice-ufrag:fDpFfGddiOaAxNYR\r\na=ice-pwd:MHPnImYkiqEzIfaYjgEePNLBMcfZebWY\r\na=rtcp-mux\r\na=rtcp-rsize\r\na=rtpmap:98 H264/90000\r\na=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f\r\na=rtcp-fb:98 goog-remb \r\na=rtcp-fb:98 ccm fir\r\na=rtcp-fb:98 nack \r\na=rtcp-fb:98 nack pli\r\na=rtcp-fb:98 nack \r\na=rtcp-fb:98 nack pli\r\na=rtcp-fb:98 transport-cc \r\na=extmap:4 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01\r\na=ssrc:769920985 cname:go2rtc\r\na=ssrc:769920985 msid:go2rtc go2rtc-video\r\na=ssrc:769920985 mslabel:go2rtc\r\na=ssrc:769920985 label:go2rtc-video\r\na=msid:go2rtc go2rtc-video\r\na=sendonly\r\na=candidate:1764917985 1 udp 2130706431 192.168.8.4 1984 typ host\r\na=candidate:713749938 1 udp 2130706431 2a03:32c0:300d:996e:6e:4253:2fba:2758 1984 typ host\r\na=candidate:1143325425 1 udp 2130706431 2a03:32c0:300d:996e:b52c:6bf3:7924:ac5c 1984 typ host\r\na=candidate:218618897 1 udp 2130706431 fd82:6bdd:4875:8e00:141b:b9a2:bc82:2a6f 1984 typ host\r\na=candidate:1352730767 1 udp 2130706431 2a03:32c0:300d:996e:826b:dd48:758e:3 1984 typ host\r\na=candidate:547378245 1 udp 1694498815 85.117.116.69 3012 typ srflx raddr 0.0.0.0 rport 57728\r\na=candidate:547378245 1 udp 1694498815 85.117.116.69 3011 typ srflx raddr 0.0.0.0 rport 62627\r\na=candidate:755044176 1 udp 1694498815 2a03:32c0:300d:996e:b52c:6bf3:7924:ac5c 58596 typ srflx raddr :: rport 58596\r\na=candidate:755044176 1 udp 1694498815 2a03:32c0:300d:996e:b52c:6bf3:7924:ac5c 53242 typ srflx raddr :: rport 53242\r\n",
+  "type": "answer"
+}
+[GIN] 2025/05/28 - 20:38:38 | 200 |  261.643875ms |   85.117.116.69 | POST     "/api/webrtc/offer?channel=202"
+[GIN] 2025/05/28 - 20:39:05 | 200 |     400.375µs |   85.117.116.69 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:39:05 | 200 |     653.917µs |   85.117.116.69 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:39:35 | 200 |      507.25µs |   85.117.116.69 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:39:35 | 200 |       304.5µs |   85.117.116.69 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:40:05 | 200 |     289.542µs |   85.117.116.69 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:40:05 | 200 |     129.875µs |   85.117.116.69 | GET      "/api/info"
+2025/05/28 20:40:07 🔴 ПРЯМОЙ ЭФИР - Запрос канала 202 (📹 Камера 2)
+[GIN] 2025/05/28 - 20:40:07 | 200 |      62.583µs |   85.117.116.69 | GET      "/api/stream/202"
+2025/05/28 20:40:07 🎯 WebRTC OFFER для канала 202: {
+  "sdp": "v=0\r\no=- 6255330878298751425 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=extmap-allow-mixed\r\na=msid-semantic: WMS\r\nm=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99 100 101 102 125 104 124 106 107 108 109 127 35\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:4V1r\r\na=ice-pwd:gY1Baiffo0YKDq6B48y2VIAN\r\na=ice-options:trickle\r\na=fingerprint:sha-256 B2:C4:8F:EC:98:B3:8B:E5:31:1D:5E:01:08:F5:FC:AC:8C:C6:88:FE:DD:D6:4E:92:1D:79:80:F3:C9:81:4C:33\r\na=setup:actpass\r\na=mid:0\r\na=extmap:1 urn:ietf:params:rtp-hdrext:toffset\r\na=extmap:2 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\r\na=extmap:3 urn:3gpp:video-orientation\r\na=extmap:4 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01\r\na=extmap:5 http://www.webrtc.org/experiments/rtp-hdrext/playout-delay\r\na=extmap:6 http://www.webrtc.org/experiments/rtp-hdrext/video-content-type\r\na=extmap:7 http://www.webrtc.org/experiments/rtp-hdrext/video-timing\r\na=extmap:8 http://www.webrtc.org/experiments/rtp-hdrext/color-space\r\na=extmap:9 urn:ietf:params:rtp-hdrext:sdes:mid\r\na=extmap:10 urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id\r\na=extmap:11 urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id\r\na=recvonly\r\na=rtcp-mux\r\na=rtcp-rsize\r\na=rtpmap:96 H264/90000\r\na=rtcp-fb:96 goog-remb\r\na=rtcp-fb:96 transport-cc\r\na=rtcp-fb:96 ccm fir\r\na=rtcp-fb:96 nack\r\na=rtcp-fb:96 nack pli\r\na=fmtp:96 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=640c1f\r\na=rtpmap:97 rtx/90000\r\na=fmtp:97 apt=96\r\na=rtpmap:98 H264/90000\r\na=rtcp-fb:98 goog-remb\r\na=rtcp-fb:98 transport-cc\r\na=rtcp-fb:98 ccm fir\r\na=rtcp-fb:98 nack\r\na=rtcp-fb:98 nack pli\r\na=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f\r\na=rtpmap:99 rtx/90000\r\na=fmtp:99 apt=98\r\na=rtpmap:100 H264/90000\r\na=rtcp-fb:100 goog-remb\r\na=rtcp-fb:100 transport-cc\r\na=rtcp-fb:100 ccm fir\r\na=rtcp-fb:100 nack\r\na=rtcp-fb:100 nack pli\r\na=fmtp:100 level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=640c1f\r\na=rtpmap:101 rtx/90000\r\na=fmtp:101 apt=100\r\na=rtpmap:102 H264/90000\r\na=rtcp-fb:102 goog-remb\r\na=rtcp-fb:102 transport-cc\r\na=rtcp-fb:102 ccm fir\r\na=rtcp-fb:102 nack\r\na=rtcp-fb:102 nack pli\r\na=fmtp:102 level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42e01f\r\na=rtpmap:125 rtx/90000\r\na=fmtp:125 apt=102\r\na=rtpmap:104 VP8/90000\r\na=rtcp-fb:104 goog-remb\r\na=rtcp-fb:104 transport-cc\r\na=rtcp-fb:104 ccm fir\r\na=rtcp-fb:104 nack\r\na=rtcp-fb:104 nack pli\r\na=rtpmap:124 rtx/90000\r\na=fmtp:124 apt=104\r\na=rtpmap:106 VP9/90000\r\na=rtcp-fb:106 goog-remb\r\na=rtcp-fb:106 transport-cc\r\na=rtcp-fb:106 ccm fir\r\na=rtcp-fb:106 nack\r\na=rtcp-fb:106 nack pli\r\na=fmtp:106 profile-id=0\r\na=rtpmap:107 rtx/90000\r\na=fmtp:107 apt=106\r\na=rtpmap:108 red/90000\r\na=rtpmap:109 rtx/90000\r\na=fmtp:109 apt=108\r\na=rtpmap:127 ulpfec/90000\r\na=rtpmap:35 flexfec-03/90000\r\na=rtcp-fb:35 goog-remb\r\na=rtcp-fb:35 transport-cc\r\na=fmtp:35 repair-window=10000000\r\n",
+  "type": "offer"
+}
+2025/05/28 20:40:07 🔄 Отправка запроса к go2rtc: http://localhost:1984/api/webrtc?src=202
+2025/05/28 20:40:07 📤 Отправка запроса к go2rtc...
+2025/05/28 20:40:08 📥 Получен ответ от go2rtc: 200 OK
+2025/05/28 20:40:08 ✅ WebRTC answer получен для канала 202: {
+  "sdp": "v=0\r\no=- 2854230631968682843 1748446807 IN IP4 0.0.0.0\r\ns=-\r\nt=0 0\r\na=msid-semantic:WMS*\r\na=fingerprint:sha-256 5C:B6:69:95:B1:8B:67:54:82:63:AC:04:36:28:B2:6B:1B:C6:DC:87:45:F3:6F:2C:40:2B:19:8A:41:E6:33:5B\r\na=extmap-allow-mixed\r\na=group:BUNDLE 0\r\nm=video 9 UDP/TLS/RTP/SAVPF 98\r\nc=IN IP4 0.0.0.0\r\na=setup:active\r\na=mid:0\r\na=ice-ufrag:HpHOqCCOjqsklnZb\r\na=ice-pwd:cyyNAAKOQxuNvLQzNCLEFixFIqFWxzwW\r\na=rtcp-mux\r\na=rtcp-rsize\r\na=rtpmap:98 H264/90000\r\na=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f\r\na=rtcp-fb:98 goog-remb \r\na=rtcp-fb:98 ccm fir\r\na=rtcp-fb:98 nack \r\na=rtcp-fb:98 nack pli\r\na=rtcp-fb:98 nack \r\na=rtcp-fb:98 nack pli\r\na=rtcp-fb:98 transport-cc \r\na=extmap:4 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01\r\na=ssrc:3651682327 cname:go2rtc\r\na=ssrc:3651682327 msid:go2rtc go2rtc-video\r\na=ssrc:3651682327 mslabel:go2rtc\r\na=ssrc:3651682327 label:go2rtc-video\r\na=msid:go2rtc go2rtc-video\r\na=sendonly\r\na=candidate:1764917985 1 udp 2130706431 192.168.8.4 1984 typ host\r\na=candidate:713749938 1 udp 2130706431 2a03:32c0:300d:996e:6e:4253:2fba:2758 1984 typ host\r\na=candidate:1143325425 1 udp 2130706431 2a03:32c0:300d:996e:b52c:6bf3:7924:ac5c 1984 typ host\r\na=candidate:218618897 1 udp 2130706431 fd82:6bdd:4875:8e00:141b:b9a2:bc82:2a6f 1984 typ host\r\na=candidate:1352730767 1 udp 2130706431 2a03:32c0:300d:996e:826b:dd48:758e:3 1984 typ host\r\na=candidate:547378245 1 udp 1694498815 85.117.116.69 3014 typ srflx raddr 0.0.0.0 rport 59479\r\na=candidate:547378245 1 udp 1694498815 85.117.116.69 33243 typ srflx raddr 0.0.0.0 rport 58249\r\na=candidate:755044176 1 udp 1694498815 2a03:32c0:300d:996e:b52c:6bf3:7924:ac5c 52495 typ srflx raddr :: rport 52495\r\na=candidate:755044176 1 udp 1694498815 2a03:32c0:300d:996e:b52c:6bf3:7924:ac5c 59426 typ srflx raddr :: rport 59426\r\n",
+  "type": "answer"
+}
+[GIN] 2025/05/28 - 20:40:08 | 200 |  289.985875ms |   85.117.116.69 | POST     "/api/webrtc/offer?channel=202"
+[GIN] 2025/05/28 - 20:40:35 | 200 |     375.916µs |   85.117.116.69 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:40:35 | 200 |     312.708µs |   85.117.116.69 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:41:05 | 200 |     282.541µs |   85.117.116.69 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:41:05 | 200 |       424.5µs |   85.117.116.69 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:41:35 | 200 |     512.375µs |   85.117.116.69 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:41:35 | 200 |     180.625µs |   85.117.116.69 | GET      "/api/info"
+2025/05/28 20:41:51 📸 СНИМОК - Канал 202
+[GIN] 2025/05/28 - 20:41:51 | 500 |   15.854084ms |   85.117.116.69 | GET      "/api/snapshot/202"
+[GIN] 2025/05/28 - 20:41:56 | 200 |     211.375µs |             ::1 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:41:56 | 200 |     164.125µs |             ::1 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:42:06 | 200 |     856.292µs |   85.117.116.69 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:42:06 | 200 |     258.917µs |   85.117.116.69 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:42:36 | 200 |     144.583µs |   85.117.116.69 | GET      "/api/info"
+[GIN] 2025/05/28 - 20:42:36 | 200 |     326.291µs |   85.117.116.69 | GET      "/api/info"

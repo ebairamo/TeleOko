@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# TeleOko v2.0 - Скрипт запуска
+# TeleOko v2.0 - Скрипт запуска с поддержкой ngrok
 # ================================
 
 set -e  # Остановка при ошибках
 
-echo "🚀 Запуск TeleOko v2.0 - Система видеонаблюдения"
-echo "=================================================="
+echo "🚀 Запуск TeleOko v2.0 - Система видеонаблюдения с поддержкой ngrok"
+echo "=================================================================="
 
 # Цвета для вывода
 RED='\033[0;31m'
@@ -43,6 +43,18 @@ check_go() {
     print_status "Go версия: $GO_VERSION"
 }
 
+# Проверка ngrok
+check_ngrok() {
+    if ! command -v ngrok &> /dev/null; then
+        print_warning "ngrok не установлен! Установите ngrok с https://ngrok.com/"
+        print_warning "Внешний доступ через интернет будет недоступен."
+        USE_NGROK=false
+    else
+        print_status "ngrok найден и будет использован для внешнего доступа"
+        USE_NGROK=true
+    fi
+}
+
 # Проверка сетевых портов
 check_ports() {
     local ports=(8082 1984)
@@ -53,6 +65,9 @@ check_ports() {
             
             if [ "$port" = "8082" ]; then
                 print_error "Порт 8082 (веб-интерфейс) занят! Остановите другие службы или измените порт в config.json"
+                exit 1
+            elif [ "$port" = "1984" ]; then
+                print_error "Порт 1984 (go2rtc) занят! Остановите другие службы или измените порт в config.json"
                 exit 1
             fi
         else
@@ -72,7 +87,7 @@ create_default_config() {
         "port": 8082
     },
     "hikvision": {
-        "ip": "192.168.8.5",
+        "ip": "192.168.8.10",
         "username": "admin",
         "password": "oborotni2447",
         "port": 554
@@ -88,19 +103,84 @@ create_default_config() {
     },
     "channels": [
         {
-            "id": "1",
-            "name": "Общий план",
-            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/1"
-        },
-        {
-            "id": "201",
-            "name": "Камера 1 (HD)",
-            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/201"
+            "id": "102",
+            "name": "📹 Камера 1",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/102"
         },
         {
             "id": "202",
-            "name": "Камера 1 (SD)",
-            "url": "rtsp://admin:oborotni2447@192.168.8.5:554/Streaming/Channels/202"
+            "name": "📹 Камера 2",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/202"
+        },
+        {
+            "id": "302",
+            "name": "📹 Камера 3",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/302"
+        },
+        {
+            "id": "402",
+            "name": "📹 Камера 4",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/402"
+        },
+        {
+            "id": "502",
+            "name": "📹 Камера 5",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/502"
+        },
+        {
+            "id": "602",
+            "name": "📹 Камера 6",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/602"
+        },
+        {
+            "id": "702",
+            "name": "📹 Камера 7",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/702"
+        },
+        {
+            "id": "802",
+            "name": "📹 Камера 8",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/802"
+        },
+        {
+            "id": "902",
+            "name": "📹 Камера 9",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/902"
+        },
+        {
+            "id": "1002",
+            "name": "📹 Камера 10",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1002"
+        },
+        {
+            "id": "1102",
+            "name": "📹 Камера 11",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1102"
+        },
+        {
+            "id": "1202",
+            "name": "📹 Камера 12",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1202"
+        },
+        {
+            "id": "1302",
+            "name": "📹 Камера 13",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1302"
+        },
+        {
+            "id": "1402",
+            "name": "📹 Камера 14",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1402"
+        },
+        {
+            "id": "1502",
+            "name": "📹 Камера 15",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1502"
+        },
+        {
+            "id": "1602",
+            "name": "📹 Камера 16",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1602"
         }
     ]
 }
@@ -110,6 +190,52 @@ EOF
     else
         print_status "Конфигурация найдена: config.json"
     fi
+}
+
+# Обновление конфигурации go2rtc для работы с ngrok
+update_go2rtc_config() {
+    print_info "Обновление конфигурации go2rtc для работы через интернет..."
+    
+    cat > go2rtc.yaml << 'EOF'
+streams:
+  102: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/102
+  202: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/202
+  302: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/302
+  402: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/402
+  502: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/502
+  602: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/602
+  702: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/702
+  802: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/802
+  902: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/902
+  1002: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1002
+  1102: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1102
+  1202: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1202
+  1302: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1302
+  1402: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1402
+  1502: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1502
+  1602: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1602
+
+webrtc:
+  listen: :1984
+  # Добавляем больше STUN серверов для надежности
+  candidates:
+    - stun:stun.l.google.com:19302
+    - stun:stun1.l.google.com:19302
+    - stun:stun2.l.google.com:19302
+    - stun:stun3.l.google.com:19302
+    - stun:stun4.l.google.com:19302
+  # Настройка для работы через ngrok
+  ice_servers:
+    - urls: [stun:stun.l.google.com:19302, stun:stun1.l.google.com:19302]
+  # Отключаем использование локальных кандидатов при подключении через интернет
+  ice_host: false
+
+api:
+  listen: :1984
+  # Разрешаем CORS для доступа из любого источника
+  cors: true
+EOF
+    print_status "Конфигурация go2rtc обновлена для работы через интернет"
 }
 
 # Сборка приложения
@@ -151,9 +277,9 @@ test_camera_connection() {
     
     # Читаем IP из конфигурации
     if command -v jq &> /dev/null; then
-        CAMERA_IP=$(jq -r '.hikvision.ip' config.json 2>/dev/null || echo "192.168.8.5")
+        CAMERA_IP=$(jq -r '.hikvision.ip' config.json 2>/dev/null || echo "192.168.8.10")
     else
-        CAMERA_IP="192.168.8.5"  # По умолчанию
+        CAMERA_IP="192.168.8.10"  # По умолчанию
     fi
     
     if ping -c 1 -W 3 "$CAMERA_IP" &> /dev/null; then
@@ -164,6 +290,46 @@ test_camera_connection() {
         print_info "  • Камера включена и подключена к сети"
         print_info "  • IP-адрес в config.json правильный"
         print_info "  • Нет блокировки файрволом"
+    fi
+}
+
+# Запуск ngrok в фоновом режиме
+start_ngrok() {
+    if [ "$USE_NGROK" = true ]; then
+        print_info "Запуск ngrok для внешнего доступа..."
+        
+        # Останавливаем предыдущие сессии ngrok, если есть
+        pkill -f ngrok || true
+        
+        # Запускаем ngrok для веб-сервера
+        ngrok http 8082 > /dev/null &
+        NGROK_WEB_PID=$!
+        print_status "ngrok запущен для порта 8082 (веб-интерфейс)"
+        
+        # Запускаем ngrok для go2rtc
+        ngrok http 1984 > /dev/null &
+        NGROK_GO2RTC_PID=$!
+        print_status "ngrok запущен для порта 1984 (go2rtc WebRTC)"
+        
+        # Ждем немного, чтобы ngrok успел запуститься и получить URL
+        sleep 5
+        
+        # Получаем URL для веб-интерфейса
+        WEB_URL=$(curl -s http://localhost:4040/api/tunnels | grep -o '"public_url":"[^"]*"' | grep -o 'http[^"]*' | head -1)
+        if [ -n "$WEB_URL" ]; then
+            print_info "Внешний URL для веб-интерфейса: $WEB_URL"
+        else
+            print_warning "Не удалось получить URL для веб-интерфейса"
+        fi
+        
+        # Получаем URL для go2rtc
+        sleep 2  # Ждем, чтобы ngrok API обновился
+        GO2RTC_URL=$(curl -s http://localhost:4041/api/tunnels | grep -o '"public_url":"[^"]*"' | grep -o 'http[^"]*' | head -1)
+        if [ -n "$GO2RTC_URL" ]; then
+            print_info "Внешний URL для go2rtc: $GO2RTC_URL"
+        else
+            print_warning "Не удалось получить URL для go2rtc"
+        fi
     fi
 }
 
@@ -178,10 +344,20 @@ show_startup_info() {
     echo "📱 Веб-интерфейс будет доступен по адресам:"
     echo "   • Локально:  http://localhost:8082"
     echo "   • По сети:   http://$LOCAL_IP:8082"
+    
+    if [ "$USE_NGROK" = true ]; then
+        echo "   • Через интернет: $WEB_URL"
+    fi
+    
     echo ""
     echo "🔧 Конфигурация:"
     echo "   • Файл:      config.json"
     echo "   • go2rtc:    http://localhost:1984"
+    
+    if [ "$USE_NGROK" = true ]; then
+        echo "   • go2rtc URL: $GO2RTC_URL"
+    fi
+    
     echo ""
     echo "📖 Полезные команды:"
     echo "   • Остановить: Ctrl+C"
@@ -197,11 +373,13 @@ main() {
     echo ""
     print_info "Проверка системных требований..."
     check_go
+    check_ngrok
     check_ports
     
     echo ""
     print_info "Подготовка конфигурации..."
     create_default_config
+    update_go2rtc_config
     
     echo ""
     print_info "Сборка приложения..."
@@ -209,6 +387,10 @@ main() {
     
     echo ""
     test_camera_connection
+    
+    echo ""
+    print_info "Настройка внешнего доступа..."
+    start_ngrok
     
     echo ""
     show_startup_info
@@ -224,7 +406,7 @@ main() {
 }
 
 # Обработка сигналов завершения
-trap 'echo -e "\n👋 Завершение TeleOko..."; exit 0' INT TERM
+trap 'echo -e "\n👋 Завершение TeleOko..."; if [ "$USE_NGROK" = true ]; then kill $NGROK_WEB_PID $NGROK_GO2RTC_PID 2>/dev/null || true; fi; exit 0' INT TERM
 
 # Запуск
 main "$@"

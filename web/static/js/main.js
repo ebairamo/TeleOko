@@ -222,117 +222,204 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    /**
-     * Запуск WebRTC потока
-     */
-    async function startWebRTCStream(channelId, streamData) {
-        try {
-            // Создаем видео элемент
-            const videoElement = document.createElement('video');
-            videoElement.autoplay = true;
-            videoElement.playsInline = true;
-            videoElement.muted = true;
-            videoElement.style.width = '100%';
-            videoElement.style.height = '100%';
-            videoElement.style.objectFit = 'contain';
-            videoElement.style.backgroundColor = '#000';
-            
-            // Настройка WebRTC
-            const pc = new RTCPeerConnection({
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
-                ],
-                iceCandidatePoolSize: 10
-            });
-            
-            currentRTCPeerConnection = pc;
-            
-            // Обработчики WebRTC событий
-            pc.ontrack = function(event) {
-                console.log('📺 Получен медиа-трек:', event.track.kind);
-                if (event.streams && event.streams[0]) {
-                    videoElement.srcObject = event.streams[0];
-                    currentStream = event.streams[0];
-                    updateConnectionStatus('online');
+/**
+ * Запуск WebRTC потока
+ */
+async function startWebRTCStream(channelId, streamData) {
+    try {
+        // Создаем видео элемент
+        const videoElement = document.createElement('video');
+        videoElement.autoplay = true;
+        videoElement.playsInline = true;
+        videoElement.muted = true;
+        videoElement.style.width = '100%';
+        videoElement.style.height = '100%';
+        videoElement.style.objectFit = 'contain';
+        videoElement.style.backgroundColor = '#000';
+        
+        // Отображаем подробные логи для отладки
+        console.log(`📹 Начинаем установку WebRTC для канала ${channelId}`);
+        
+        // Настройка WebRTC с большим количеством STUN серверов
+        const pc = new RTCPeerConnection({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' },
+                { urls: 'stun:stun4.l.google.com:19302' },
+                // Добавляем TURN сервер для обхода NAT
+                {
+                    urls: 'turn:numb.viagenie.ca',
+                    username: 'webrtc@live.com',
+                    credential: 'muazkh'
                 }
-            };
-            
-            pc.oniceconnectionstatechange = function() {
-                console.log('🔌 ICE состояние:', pc.iceConnectionState);
-                
-                if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-                    updateConnectionStatus('online');
-                } else if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
-                    updateConnectionStatus('offline');
-                }
-            };
-            
-            // Добавляем трансивер для получения видео
-            pc.addTransceiver('video', { direction: 'recvonly' });
-            
-            // Создаем SDP offer
-            const offer = await pc.createOffer({
-                offerToReceiveVideo: true,
-                offerToReceiveAudio: false
-            });
-            
-            await pc.setLocalDescription(offer);
-            
-            // Отправляем offer на сервер
-            const response = await fetch('/api/webrtc/offer?channel=' + channelId, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    type: offer.type,
-                    sdp: offer.sdp
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
+            ],
+            iceCandidatePoolSize: 10,
+            // Принудительно используем relay для обхода NAT
+            iceTransportPolicy: 'relay'
+        });
+        
+        currentRTCPeerConnection = pc;
+        
+        // Подробное логгирование всех событий WebRTC
+        pc.addEventListener('negotiationneeded', e => console.log('📢 negotiationneeded', e));
+        pc.addEventListener('signalingstatechange', e => console.log('📢 signalingstatechange', pc.signalingState));
+        pc.addEventListener('iceconnectionstatechange', e => console.log('📢 iceconnectionstatechange', pc.iceConnectionState));
+        pc.addEventListener('icegatheringstatechange', e => console.log('📢 icegatheringstatechange', pc.iceGatheringState));
+        pc.addEventListener('icecandidate', e => console.log('📢 icecandidate', e.candidate));
+        pc.addEventListener('connectionstatechange', e => console.log('📢 connectionstatechange', pc.connectionState));
+        
+        // Обработчики WebRTC событий
+        pc.ontrack = function(event) {
+            console.log('📺 Получен медиа-трек:', event.track.kind);
+            if (event.streams && event.streams[0]) {
+                console.log('💫 Установка источника видео:', event.streams[0]);
+                videoElement.srcObject = event.streams[0];
+                currentStream = event.streams[0];
+                updateConnectionStatus('online');
             }
+        };
+        
+        pc.oniceconnectionstatechange = function() {
+            console.log('🔌 ICE состояние:', pc.iceConnectionState);
             
-            const answer = await response.json();
-            
-            if (answer.error) {
-                throw new Error(answer.error);
+            if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                updateConnectionStatus('online');
+            } else if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+                updateConnectionStatus('offline');
+                console.error('❌ ICE соединение разорвано или не удалось установить');
             }
-            
-            // Устанавливаем удаленное описание
-            if (answer.sdp) {
-                await pc.setRemoteDescription(new RTCSessionDescription({
-                    type: answer.type || 'answer',
-                    sdp: answer.sdp
-                }));
-            }
-            
-            // Очищаем контейнер и добавляем видео
-            videoContainer.innerHTML = '';
-            videoContainer.appendChild(videoElement);
-            currentVideoElement = videoElement;
-            
-            // Добавляем информационную панель
-            const infoPanel = document.createElement('div');
-            infoPanel.className = 'video-info-panel';
-            infoPanel.innerHTML = 
-                '<div class="video-info">' +
-                    '<span>📺 ' + (streamData.channel_name || 'Канал ' + channelId) + '</span>' +
-                    '<span>🔴 Прямой эфир</span>' +
-                '</div>';
-            videoContainer.appendChild(infoPanel);
-            
-            // Добавляем контролы
-            addVideoControls(videoContainer);
-            
-        } catch (error) {
-            console.error('❌ WebRTC ошибка:', error);
-            throw new Error('WebRTC ошибка: ' + error.message);
+        };
+        
+        // Добавляем трансивер для получения видео
+        console.log('🔄 Добавляем видео трансивер');
+        pc.addTransceiver('video', { direction: 'recvonly' });
+        
+        // Создаем SDP offer
+        console.log('📝 Создаем SDP offer');
+        const offer = await pc.createOffer({
+            offerToReceiveVideo: true,
+            offerToReceiveAudio: false
+        });
+        
+        console.log('📝 SDP offer создан:', offer);
+        
+        await pc.setLocalDescription(offer);
+        console.log('📝 Установлен локальный SDP');
+        
+        // Отправляем offer на сервер
+        console.log('📤 Отправляем offer на сервер');
+        const response = await fetch('/api/webrtc/offer?channel=' + channelId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                type: offer.type,
+                sdp: offer.sdp
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
         }
+        
+        const answer = await response.json();
+        console.log('📥 Получен SDP answer:', answer);
+        
+        if (answer.error) {
+            throw new Error(answer.error);
+        }
+        
+        // Устанавливаем удаленное описание
+        if (answer.sdp) {
+            console.log('📝 Устанавливаем удаленный SDP');
+            await pc.setRemoteDescription(new RTCSessionDescription({
+                type: answer.type || 'answer',
+                sdp: answer.sdp
+            }));
+            console.log('📝 Удаленный SDP установлен');
+        } else {
+            console.error('❌ SDP отсутствует в ответе');
+        }
+        
+        // Добавляем обработчик для проверки состояния соединения через некоторое время
+        setTimeout(() => {
+            if (pc.iceConnectionState !== 'connected' && pc.iceConnectionState !== 'completed') {
+                console.error('⏱️ Время ожидания ICE соединения истекло:', pc.iceConnectionState);
+                // Можно добавить автоматическую перезагрузку
+            }
+        }, 10000); // 10 секунд ожидания
+        
+        // Очищаем контейнер и добавляем видео
+        videoContainer.innerHTML = '';
+        videoContainer.appendChild(videoElement);
+        currentVideoElement = videoElement;
+        
+        // Добавляем информационную панель
+        const infoPanel = document.createElement('div');
+        infoPanel.className = 'video-info-panel';
+        infoPanel.innerHTML = 
+            '<div class="video-info">' +
+                '<span>📺 ' + (streamData.channel_name || 'Канал ' + channelId) + '</span>' +
+                '<span>🔴 Прямой эфир</span>' +
+            '</div>';
+        videoContainer.appendChild(infoPanel);
+        
+        // Добавляем контролы
+        addVideoControls(videoContainer);
+        
+        // Добавляем кнопку перезагрузки видео
+        const reloadButton = document.createElement('button');
+        reloadButton.className = 'reload-btn primary-btn';
+        reloadButton.style.position = 'absolute';
+        reloadButton.style.bottom = '20px';
+        reloadButton.style.left = '20px';
+        reloadButton.style.zIndex = '100';
+        reloadButton.textContent = '🔄 Перезагрузить видео';
+        reloadButton.onclick = () => {
+            stopCurrentStream();
+            startLiveStream();
+        };
+        videoContainer.appendChild(reloadButton);
+        
+        // Добавляем индикатор соединения
+        const connectionIndicator = document.createElement('div');
+        connectionIndicator.className = 'connection-indicator';
+        connectionIndicator.style.position = 'absolute';
+        connectionIndicator.style.top = '10px';
+        connectionIndicator.style.right = '10px';
+        connectionIndicator.style.padding = '5px 10px';
+        connectionIndicator.style.borderRadius = '4px';
+        connectionIndicator.style.fontSize = '12px';
+        connectionIndicator.style.color = 'white';
+        connectionIndicator.style.background = 'rgba(0, 0, 0, 0.5)';
+        connectionIndicator.style.zIndex = '100';
+        connectionIndicator.textContent = '🔄 Установка соединения...';
+        videoContainer.appendChild(connectionIndicator);
+        
+        // Обновляем индикатор при изменении состояния
+        const updateIndicator = () => {
+            if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                connectionIndicator.textContent = '✅ Соединение установлено';
+                connectionIndicator.style.background = 'rgba(46, 204, 113, 0.5)';
+            } else if (pc.iceConnectionState === 'checking') {
+                connectionIndicator.textContent = '🔄 Проверка соединения...';
+                connectionIndicator.style.background = 'rgba(241, 196, 15, 0.5)';
+            } else if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+                connectionIndicator.textContent = '❌ Ошибка соединения';
+                connectionIndicator.style.background = 'rgba(231, 76, 60, 0.5)';
+            }
+        };
+        
+        pc.addEventListener('iceconnectionstatechange', updateIndicator);
+        
+    } catch (error) {
+        console.error('❌ WebRTC ошибка:', error);
+        throw new Error('WebRTC ошибка: ' + error.message);
     }
-    
+}
     /**
      * Остановка текущего потока
      */

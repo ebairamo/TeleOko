@@ -5,12 +5,14 @@ import (
 	"TeleOko/internal/hikvision"
 	"TeleOko/internal/network"
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -98,10 +100,13 @@ func HandleWebRTCOffer(c *gin.Context) {
 		return
 	}
 
-	log.Printf("🎯 WebRTC OFFER для канала %s", channelID)
+	// Добавляем подробные логи
+	offerJSON, _ := json.MarshalIndent(offer, "", "  ")
+	log.Printf("🎯 WebRTC OFFER для канала %s: %s", channelID, string(offerJSON))
 
 	// Создаем URL для go2rtc API
 	go2rtcURL := fmt.Sprintf("http://localhost:%d/api/webrtc?src=%s", config.GetGo2RTCPort(), channelID)
+	log.Printf("🔄 Отправка запроса к go2rtc: %s", go2rtcURL)
 
 	// Отправляем offer к go2rtc
 	jsonData, err := json.Marshal(offer)
@@ -110,7 +115,31 @@ func HandleWebRTCOffer(c *gin.Context) {
 		return
 	}
 
-	resp, err := http.Post(go2rtcURL, "application/json", bytes.NewBuffer(jsonData))
+	// Создаем HTTP-клиент с настройками для работы через ngrok
+	client := &http.Client{
+		Transport: &http.Transport{
+			// Устанавливаем таймауты для работы через ngrok
+			ResponseHeaderTimeout: 30 * time.Second,
+			ExpectContinueTimeout: 30 * time.Second,
+			// Отключаем проверку SSL для случаев, когда ngrok использует самоподписанные сертификаты
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+		Timeout: 60 * time.Second, // Увеличиваем общий таймаут
+	}
+
+	req, err := http.NewRequest("POST", go2rtcURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("❌ Ошибка создания запроса: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка создания запроса к go2rtc"})
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	log.Printf("📤 Отправка запроса к go2rtc...")
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("❌ Ошибка отправки к go2rtc: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка подключения к go2rtc"})
@@ -118,14 +147,27 @@ func HandleWebRTCOffer(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
+	log.Printf("📥 Получен ответ от go2rtc: %s", resp.Status)
+
 	// Читаем ответ от go2rtc
-	var answer map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&answer); err != nil {
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("❌ Ошибка чтения ответа: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка чтения ответа"})
 		return
 	}
 
-	log.Printf("✅ WebRTC answer получен для канала %s", channelID)
+	var answer map[string]interface{}
+	if err := json.Unmarshal(body, &answer); err != nil {
+		log.Printf("❌ Ошибка парсинга ответа: %v", err)
+		log.Printf("📄 Тело ответа: %s", string(body))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка парсинга ответа"})
+		return
+	}
+
+	// Добавляем подробные логи
+	answerJSON, _ := json.MarshalIndent(answer, "", "  ")
+	log.Printf("✅ WebRTC answer получен для канала %s: %s", channelID, string(answerJSON))
 
 	// Возвращаем answer клиенту
 	c.JSON(http.StatusOK, answer)
@@ -277,11 +319,24 @@ func TestCameraConnection(c *gin.Context) {
 
 // ProxyToGo2RTC проксирует запросы к go2rtc
 func ProxyToGo2RTC(c *gin.Context) {
-	// Простое проксирование
-	targetURL := fmt.Sprintf("http://localhost:%d%s", config.GetGo2RTCPort(), c.Request.URL.Path)
+	// Получаем путь запроса, убирая префикс "/api/go2rtc"
+	path := strings.TrimPrefix(c.Request.URL.Path, "/api/go2rtc")
+
+	// Создаем URL для go2rtc
+	targetURL := fmt.Sprintf("http://localhost:%d%s", config.GetGo2RTCPort(), path)
+	if c.Request.URL.RawQuery != "" {
+		targetURL += "?" + c.Request.URL.RawQuery
+	}
 
 	// Создаем новый запрос
-	req, err := http.NewRequest(c.Request.Method, targetURL, c.Request.Body)
+	var body io.Reader
+	if c.Request.Body != nil {
+		bodyBytes, _ := io.ReadAll(c.Request.Body)
+		c.Request.Body.Close()
+		body = bytes.NewBuffer(bodyBytes)
+	}
+
+	req, err := http.NewRequest(c.Request.Method, targetURL, body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка создания запроса"})
 		return
@@ -292,6 +347,11 @@ func ProxyToGo2RTC(c *gin.Context) {
 		for _, value := range values {
 			req.Header.Add(key, value)
 		}
+	}
+
+	// Устанавливаем правильный Content-Type для WebRTC
+	if strings.Contains(path, "/webrtc") {
+		req.Header.Set("Content-Type", "application/json")
 	}
 
 	// Выполняем запрос
