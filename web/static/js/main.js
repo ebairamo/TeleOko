@@ -240,44 +240,64 @@ async function startWebRTCStream(channelId, streamData) {
         // Отображаем подробные логи для отладки
         console.log(`📹 Начинаем установку WebRTC для канала ${channelId}`);
         
-        // Настройка WebRTC с большим количеством STUN серверов
+        // Настройка WebRTC для работы через ngrok/интернет
         const pc = new RTCPeerConnection({
             iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' },
-                { urls: 'stun:stun3.l.google.com:19302' },
-                { urls: 'stun:stun4.l.google.com:19302' },
-                // Добавляем TURN сервер для обхода NAT
+                // Только TURN серверы для принудительного relay
                 {
-                    urls: 'turn:numb.viagenie.ca',
-                    username: 'webrtc@live.com',
-                    credential: 'muazkh'
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
                 }
             ],
             iceCandidatePoolSize: 10,
-            // Принудительно используем relay для обхода NAT
-            iceTransportPolicy: 'relay'
+            // КРИТИЧНО: принудительно используем relay даже в локальной сети
+            iceTransportPolicy: 'relay',
+            bundlePolicy: 'max-bundle',
+            rtcpMuxPolicy: 'require'
         });
         
         currentRTCPeerConnection = pc;
         
-        // Подробное логгирование всех событий WebRTC
-        pc.addEventListener('negotiationneeded', e => console.log('📢 negotiationneeded', e));
-        pc.addEventListener('signalingstatechange', e => console.log('📢 signalingstatechange', pc.signalingState));
-        pc.addEventListener('iceconnectionstatechange', e => console.log('📢 iceconnectionstatechange', pc.iceConnectionState));
-        pc.addEventListener('icegatheringstatechange', e => console.log('📢 icegatheringstatechange', pc.iceGatheringState));
-        pc.addEventListener('icecandidate', e => console.log('📢 icecandidate', e.candidate));
-        pc.addEventListener('connectionstatechange', e => console.log('📢 connectionstatechange', pc.connectionState));
+        // Логгирование событий WebRTC
+        pc.addEventListener('negotiationneeded', e => console.log('📢 negotiationneeded'));
+        pc.addEventListener('signalingstatechange', e => console.log('📢 signalingstatechange:', pc.signalingState));
+        pc.addEventListener('iceconnectionstatechange', e => console.log('📢 iceconnectionstatechange:', pc.iceConnectionState));
+        pc.addEventListener('icegatheringstatechange', e => console.log('📢 icegatheringstatechange:', pc.iceGatheringState));
+        pc.addEventListener('connectionstatechange', e => console.log('📢 connectionstatechange:', pc.connectionState));
+        
+        // Логируем ICE кандидатов
+        pc.addEventListener('icecandidate', e => {
+            if (e.candidate) {
+                console.log('🧊 ICE candidate:', e.candidate.type, e.candidate.address);
+            } else {
+                console.log('🧊 ICE gathering complete');
+            }
+        });
         
         // Обработчики WebRTC событий
         pc.ontrack = function(event) {
             console.log('📺 Получен медиа-трек:', event.track.kind);
             if (event.streams && event.streams[0]) {
-                console.log('💫 Установка источника видео:', event.streams[0]);
+                console.log('💫 Установка источника видео');
                 videoElement.srcObject = event.streams[0];
                 currentStream = event.streams[0];
-                updateConnectionStatus('online');
+                
+                // Обработка метаданных видео
+                videoElement.onloadedmetadata = () => {
+                    console.log('📐 Видео размер:', videoElement.videoWidth + 'x' + videoElement.videoHeight);
+                    updateConnectionStatus('online');
+                };
             }
         };
         
@@ -285,7 +305,7 @@ async function startWebRTCStream(channelId, streamData) {
             console.log('🔌 ICE состояние:', pc.iceConnectionState);
             
             if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-                updateConnectionStatus('online');
+                update
             } else if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
                 updateConnectionStatus('offline');
                 console.error('❌ ICE соединение разорвано или не удалось установить');

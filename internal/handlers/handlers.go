@@ -81,6 +81,7 @@ func GetLiveStream(c *gin.Context) {
 }
 
 // HandleWebRTCOffer обрабатывает WebRTC offer и проксирует его к go2rtc
+// HandleWebRTCOffer обрабатывает WebRTC offer и проксирует его к go2rtc
 func HandleWebRTCOffer(c *gin.Context) {
 	channelID := c.Query("channel")
 	if channelID == "" {
@@ -101,8 +102,7 @@ func HandleWebRTCOffer(c *gin.Context) {
 	}
 
 	// Добавляем подробные логи
-	offerJSON, _ := json.MarshalIndent(offer, "", "  ")
-	log.Printf("🎯 WebRTC OFFER для канала %s: %s", channelID, string(offerJSON))
+	log.Printf("🎯 WebRTC OFFER для канала %s", channelID)
 
 	// Создаем URL для go2rtc API
 	go2rtcURL := fmt.Sprintf("http://localhost:%d/api/webrtc?src=%s", config.GetGo2RTCPort(), channelID)
@@ -138,6 +138,11 @@ func HandleWebRTCOffer(c *gin.Context) {
 
 	req.Header.Set("Content-Type", "application/json")
 
+	// Добавляем заголовки для работы через прокси
+	if origin := c.GetHeader("Origin"); origin != "" {
+		req.Header.Set("Origin", origin)
+	}
+
 	log.Printf("📤 Отправка запроса к go2rtc...")
 	resp, err := client.Do(req)
 	if err != nil {
@@ -157,6 +162,13 @@ func HandleWebRTCOffer(c *gin.Context) {
 		return
 	}
 
+	// Проверяем, не является ли ответ ошибкой
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("❌ go2rtc вернул ошибку: %s", string(body))
+		c.JSON(resp.StatusCode, gin.H{"error": "Ошибка go2rtc", "details": string(body)})
+		return
+	}
+
 	var answer map[string]interface{}
 	if err := json.Unmarshal(body, &answer); err != nil {
 		log.Printf("❌ Ошибка парсинга ответа: %v", err)
@@ -165,9 +177,14 @@ func HandleWebRTCOffer(c *gin.Context) {
 		return
 	}
 
-	// Добавляем подробные логи
-	answerJSON, _ := json.MarshalIndent(answer, "", "  ")
-	log.Printf("✅ WebRTC answer получен для канала %s: %s", channelID, string(answerJSON))
+	// Проверяем наличие ошибки в ответе
+	if errMsg, exists := answer["error"]; exists {
+		log.Printf("❌ go2rtc вернул ошибку: %v", errMsg)
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("go2rtc error: %v", errMsg)})
+		return
+	}
+
+	log.Printf("✅ WebRTC answer получен для канала %s", channelID)
 
 	// Возвращаем answer клиенту
 	c.JSON(http.StatusOK, answer)

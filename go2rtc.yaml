@@ -1,3 +1,7 @@
+# Конфигурация go2rtc для TeleOko v2.0
+# Принудительно использует relay для работы через ngrok
+
+# Потоки камер Hikvision
 streams:
   102: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/102
   202: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/202
@@ -16,22 +20,33 @@ streams:
   1502: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1502
   1602: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1602
 
-webrtc:
-  listen: :1984
-  # Добавляем больше STUN серверов для надежности
-  candidates:
-    - stun:stun.l.google.com:19302
-    - stun:stun1.l.google.com:19302
-    - stun:stun2.l.google.com:19302
-    - stun:stun3.l.google.com:19302
-    - stun:stun4.l.google.com:19302
-  # Настройка для работы через ngrok
-  ice_servers:
-    - urls: [stun:stun.l.google.com:19302, stun:stun1.l.google.com:19302]
-  # Отключаем использование локальных кандидатов при подключении через интернет
-  ice_host: false
-
+# API настройки
 api:
   listen: :1984
-  # Разрешаем CORS для доступа из любого источника
-  cors: true
+  origin: "*"
+
+# WebRTC настройки - принудительный relay
+webrtc:
+  listen: :1984
+  
+  # Отключаем локальные кандидаты полностью
+  candidates: []
+  
+  # ICE серверы только с TURN relay
+  ice_servers:
+    - urls:
+      - turn:openrelay.metered.ca:80
+      username: openrelayproject
+      credential: openrelayproject
+    - urls:
+      - turn:openrelay.metered.ca:443
+      username: openrelayproject  
+      credential: openrelayproject
+    - urls:
+      - turn:openrelay.metered.ca:443?transport=tcp
+      username: openrelayproject
+      credential: openrelayproject
+
+# RTSP сервер
+rtsp:
+  listen: :8554
