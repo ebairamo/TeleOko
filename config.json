@@ -20,6 +20,11 @@
     },
     "channels": [
         {
+            "id": "1",
+            "name": "🎥 Общий план",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1"
+        },
+        {
             "id": "102",
             "name": "📹 Камера 1",
             "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/102"
