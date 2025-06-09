@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeleOko - Прямое подключение</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #333; }
+        .video-container { width: 100%; height: 70vh; background: #000; position: relative; margin-bottom: 20px; }
+        video { width: 100%; height: 100%; object-fit: contain; }
+        select, button { padding: 10px; margin: 10px 0; }
+        button { background: #3498db; color: white; border: none; cursor: pointer; }
+        .info { background: #f9f9f9; padding: 15px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TeleOko - Подключение к камере 102</h1>
+        
+        <div class="video-container" id="videoContainer">
+            <div style="color: white; text-align: center; padding-top: 30%;">Загрузка...</div>
+        </div>
+        
+        <button id="connectBtn">Подключить камеру 102</button>
+        <button id="reloadBtn">Перезагрузить</button>
+        
+        <div class="info">
+            <h3>Информация</h3>
+            <div id="connectionInfo">Ожидание подключения</div>
+        </div>
+    </div>
+
+    <script>
+        // Элементы интерфейса
+        const videoContainer = document.getElementById('videoContainer');
+        const connectBtn = document.getElementById('connectBtn');
+        const reloadBtn = document.getElementById('reloadBtn');
+        const connectionInfo = document.getElementById('connectionInfo');
+        
+        // Текущее соединение
+        let peerConnection = null;
+        let videoElement = null;
+        
+        // ПРЯМОЙ URL ДЛЯ GO2RTC - ЗАМЕНИТЬ НА ВАШ АКТУАЛЬНЫЙ URL
+        const GO2RTC_URL = 'https://23d8-2a03-32c0-300c-d8f8-c8a3-21d8-358d-1b9.ngrok-free.app';
+        const CHANNEL_ID = '102'; // Камера 1 SD
+
+        // Подключение к камере
+        async function connect() {
+            try {
+                // Очищаем предыдущее соединение
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+                
+                if (videoElement) {
+                    if (videoElement.srcObject) {
+                        videoElement.srcObject.getTracks().forEach(track => track.stop());
+                    }
+                    videoElement.remove();
+                    videoElement = null;
+                }
+                
+                videoContainer.innerHTML = '<div style="color: white; text-align: center; padding-top: 30%;">Подключение к камере...</div>';
+                
+                // Создаем видео элемент
+                videoElement = document.createElement('video');
+                videoElement.autoplay = true;
+                videoElement.playsInline = true;
+                videoElement.muted = true;
+                videoElement.style.width = '100%';
+                videoElement.style.height = '100%';
+                
+                // Определяем мобильное соединение
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                
+                // WebRTC настройки
+                const config = {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        {
+                            urls: ['turn:openrelay.metered.ca:80?transport=tcp', 'turn:openrelay.metered.ca:443?transport=tcp'],
+                            username: 'openrelayproject',
+                            credential: 'openrelayproject'
+                        }
+                    ],
+                    iceTransportPolicy: isMobile ? 'relay' : 'all'
+                };
+                
+                // Создаем RTCPeerConnection
+                peerConnection = new RTCPeerConnection(config);
+                
+                // Обработчики
+                peerConnection.oniceconnectionstatechange = () => {
+                    const state = peerConnection.iceConnectionState;
+                    console.log('ICE состояние:', state);
+                    connectionInfo.innerHTML = `ICE состояние: ${state}<br>URL: ${GO2RTC_URL}<br>Канал: ${CHANNEL_ID}<br>Мобильное: ${isMobile ? 'Да' : 'Нет'}`;
+                };
+                
+                peerConnection.ontrack = (event) => {
+                    console.log('Получен трек');
+                    if (event.streams && event.streams[0]) {
+                        videoElement.srcObject = event.streams[0];
+                        videoElement.onloadedmetadata = () => videoElement.play().catch(e => console.log('Ошибка воспроизведения:', e));
+                    }
+                };
+                
+                // Получаем видео
+                peerConnection.addTransceiver('video', { direction: 'recvonly' });
+                
+                // Создаем SDP offer
+                const offer = await peerConnection.createOffer({
+                    offerToReceiveVideo: true, 
+                    offerToReceiveAudio: false
+                });
+                
+                await peerConnection.setLocalDescription(offer);
+                
+                // Отправляем запрос к go2rtc
+                const response = await fetch(`${GO2RTC_URL}/api/webrtc?src=${CHANNEL_ID}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: offer.type,
+                        sdp: offer.sdp
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ошибка: ${response.status}`);
+                }
+                
+                const answer = await response.json();
+                
+                if (!answer.sdp) {
+                    throw new Error('SDP отсутствует в ответе');
+                }
+                
+                // Устанавливаем удаленное описание
+                await peerConnection.setRemoteDescription(new RTCSessionDescription({
+                    type: 'answer',
+                    sdp: answer.sdp
+                }));
+                
+                // Добавляем видео в контейнер
+                videoContainer.innerHTML = '';
+                videoContainer.appendChild(videoElement);
+                
+                // Клик для запуска видео на мобильных
+                videoContainer.addEventListener('click', () => {
+                    if (videoElement.paused) {
+                        videoElement.play().catch(e => console.log('Ошибка при клике:', e));
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Ошибка:', error);
+                videoContainer.innerHTML = `<div style="color: white; text-align: center; padding-top: 30%;">Ошибка: ${error.message}</div>`;
+                connectionInfo.innerHTML = `Ошибка: ${error.message}<br>URL: ${GO2RTC_URL}<br>Канал: ${CHANNEL_ID}`;
+            }
+        }
+        
+        // Обработчики кнопок
+        connectBtn.addEventListener('click', connect);
+        reloadBtn.addEventListener('click', connect);
+        
+        // Автоматическое подключение при загрузке
+        document.addEventListener('DOMContentLoaded', connect);
+    </script>
+</body>
+</html>

@@ -94,6 +94,7 @@ func main() {
 			c.JSON(http.StatusOK, gin.H{"status": "ok", "timestamp": time.Now().Unix()})
 		})
 
+		api.GET("/go2rtc-url", handlers.GetGo2rtcUrl)
 		// Работа с каналами
 		api.GET("/channels", handlers.GetChannels)
 

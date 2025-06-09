@@ -222,8 +222,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+
 /**
- * Запуск WebRTC потока с поддержкой мобильных сетей
+ * Запуск WebRTC потока - с поддержкой прямого подключения к go2rtc
  */
 async function startWebRTCStream(channelId, streamData) {
     try {
@@ -237,205 +238,162 @@ async function startWebRTCStream(channelId, streamData) {
         videoElement.style.objectFit = 'contain';
         videoElement.style.backgroundColor = '#000';
         
-        // Отображаем подробные логи для отладки
-        console.log(`📹 Начинаем установку WebRTC для канала ${channelId}`);
+        // Показываем индикатор загрузки
+        showLoadingIndicator(videoContainer, 'Подключение к камере...');
         
-        // Определяем, мобильное ли соединение
-        const isMobileConnection = navigator.connection && 
-            (navigator.connection.type === 'cellular' || 
-             navigator.connection.effectiveType === '3g' || 
-             navigator.connection.effectiveType === '2g' ||
-             navigator.connection.downlink < 2);
+        // Определяем тип соединения
+        const isMobile = detectMobileNetwork();
+        console.log(`📱 Тип соединения: ${isMobile ? 'Мобильное' : 'WiFi/Проводное'}`);
         
-        console.log(`📱 Тип соединения: ${isMobileConnection ? 'Мобильное' : 'Стационарное'}`);
+        console.log(`📹 Начинаем подключение к камере ${channelId}`);
         
-        // Специальные настройки WebRTC для мобильных сетей
-        const pc = new RTCPeerConnection({
+        // Настройки WebRTC с учетом типа соединения
+        const pcConfig = {
             iceServers: [
-                // STUN серверы, работающие через мобильные сети
+                // STUN серверы
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun.stunprotocol.org:3478' },
                 
-                // TURN серверы с TCP - обязательно для мобильных сетей
+                // TURN серверы для надежности
                 {
                     urls: [
                         'turn:openrelay.metered.ca:80?transport=tcp',
-                        'turn:openrelay.metered.ca:443?transport=tcp'
-                    ],
-                    username: 'openrelayproject',
-                    credential: 'openrelayproject'
-                },
-                {
-                    urls: [
+                        'turn:openrelay.metered.ca:443?transport=tcp',
                         'turn:openrelay.metered.ca:80',
                         'turn:openrelay.metered.ca:443'
                     ],
                     username: 'openrelayproject',
                     credential: 'openrelayproject'
-                },
-                {
-                    urls: 'turn:global.turn.twilio.com:3478?transport=tcp',
-                    username: 'f4b4035eaa76f77e3b3f90eda80c6f9250e6072728a458fc1345000000000000',
-                    credential: '/7OMV8e64wEVj/8H64d4vGKWG9Dj3kZTTI4rjZhzDvk='
-                },
-                {
-                    urls: [
-                        'turn:eu-turn1.xirsys.com:80?transport=tcp',
-                        'turn:eu-turn2.xirsys.com:80?transport=tcp'
-                    ],
-                    username: '4kFU+JWgwVXiQ3Bf9pRLvRNlOCk=',
-                    credential: '3+2+4WN9VxbdYpU9gcQuTmrlIc0='
-                },
-                {
-                    urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
-                    username: 'webrtc',
-                    credential: 'webrtc'
                 }
             ],
-            iceCandidatePoolSize: 20,
-            // Принудительно используем только relay для мобильных сетей
-            iceTransportPolicy: isMobileConnection ? 'relay' : 'all',
+            iceCandidatePoolSize: 10,
+            // Для мобильных сетей только relay
+            iceTransportPolicy: isMobile ? 'relay' : 'all',
             bundlePolicy: 'max-bundle',
-            rtcpMuxPolicy: 'require',
-            sdpSemantics: 'unified-plan'
-        });
+            rtcpMuxPolicy: 'require'
+        };
         
+        // Создаем RTCPeerConnection
+        const pc = new RTCPeerConnection(pcConfig);
         currentRTCPeerConnection = pc;
         
-        // Добавляем все обработчики событий WebRTC
+        // Базовые обработчики событий
         setupWebRTCEventHandlers(pc, videoElement);
         
         // Добавляем трансивер для получения видео
-        console.log('🔄 Добавляем видео трансивер');
-        pc.addTransceiver('video', { 
-            direction: 'recvonly',
-            streams: [new MediaStream()]
-        });
+        pc.addTransceiver('video', { direction: 'recvonly' });
         
-        // Создаем SDP offer с улучшенными настройками для мобильных сетей
+        // Создаем SDP offer
         console.log('📝 Создаем SDP offer');
-        const offerOptions = {
+        const offer = await pc.createOffer({
             offerToReceiveVideo: true,
             offerToReceiveAudio: false,
-            voiceActivityDetection: false,
             iceRestart: true
-        };
+        });
         
-        const offer = await pc.createOffer(offerOptions);
-        
-        // Модифицируем SDP для улучшения работы через мобильные сети
-        let sdp = offer.sdp;
-        
-        // Установка параметров видео
-        if (isMobileConnection) {
+        // Модифицируем SDP для мобильных сетей при необходимости
+        if (isMobile) {
+            let sdp = offer.sdp;
             // Понижаем битрейт для мобильных сетей
-            sdp = sdp.replace(/a=mid:video\r\n/g, 
-                'a=mid:video\r\na=content:main\r\na=rtcp-fb:* nack\r\na=rtcp-fb:* nack pli\r\na=rtcp-fb:* ccm fir\r\n');
-            
-            // Устанавливаем параметры видео кодека для мобильных сетей
             sdp = sdp.replace(/a=rtpmap:(96|97|98) VP8\/90000\r\n/g, 
-                'a=rtpmap:$1 VP8/90000\r\na=fmtp:$1 x-google-min-bitrate=100;x-google-max-bitrate=800;x-google-start-bitrate=300\r\n');
+                'a=rtpmap:$1 VP8/90000\r\na=fmtp:$1 x-google-min-bitrate=100;x-google-max-bitrate=500;x-google-start-bitrate=300\r\n');
+            offer.sdp = sdp;
         }
-        
-        // Принудительно используем TCP для мобильных сетей
-        if (isMobileConnection) {
-            // Удаляем UDP кандидатов если мобильное соединение
-            sdp = sdp.replace(/a=candidate:.*UDP.*\r\n/g, '');
-        }
-        
-        offer.sdp = sdp;
-        console.log('📝 SDP offer создан и модифицирован');
         
         await pc.setLocalDescription(offer);
         console.log('📝 Установлен локальный SDP');
         
-        // Показываем индикатор загрузки
-        showLoadingIndicator(videoContainer, 'Подключение к камере...');
-        
-        // Отправляем offer на сервер
-        console.log('📤 Отправляем offer на сервер');
+        // Пытаемся получить URL для прямого подключения к go2rtc
+        let go2rtcURL = null;
         try {
-            const response = await fetch('/api/webrtc/offer?channel=' + channelId, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    type: offer.type,
-                    sdp: offer.sdp
-                }),
-                // Увеличиваем таймаут для мобильных соединений
-                timeout: 15000
-            });
-            
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
+            // Запрашиваем системную информацию
+            const infoResponse = await fetch('/api/info');
+            if (infoResponse.ok) {
+                const infoData = await infoResponse.json();
+                go2rtcURL = infoData.go2rtc_url;
+                console.log('🌐 Получен URL для go2rtc:', go2rtcURL);
             }
-            
+        } catch (error) {
+            console.warn('⚠️ Не удалось получить URL для go2rtc:', error);
+        }
+        
+        let useDirectConnection = false;
+        let response = null;
+        
+        // Пробуем прямое подключение к go2rtc, если URL доступен
+        if (go2rtcURL) {
+            try {
+                console.log('🔄 Пробуем прямое подключение к go2rtc');
+                const directUrl = `${go2rtcURL}/api/webrtc?src=${channelId}`;
+                console.log('URL для прямого подключения:', directUrl);
+                
+                response = await fetch(directUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: offer.type,
+                        sdp: offer.sdp
+                    })
+                });
+                
+                if (response.ok) {
+                    useDirectConnection = true;
+                    console.log('✅ Прямое подключение к go2rtc успешно');
+                } else {
+                    console.warn('⚠️ Ошибка прямого подключения, статус:', response.status);
+                }
+            } catch (error) {
+                console.warn('⚠️ Ошибка прямого подключения:', error);
+            }
+        }
+        
+        // Если прямое подключение не удалось, используем прокси через наш сервер
+        if (!useDirectConnection) {
+            try {
+                console.log('🔄 Используем подключение через прокси');
+                response = await fetch('/api/webrtc/offer?channel=' + channelId, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: offer.type,
+                        sdp: offer.sdp
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Ошибка HTTP: ' + response.status);
+                }
+            } catch (error) {
+                console.error('❌ Ошибка при подключении через прокси:', error);
+                showErrorOverlay(videoContainer, 'Не удалось подключиться к серверу');
+                return;
+            }
+        }
+        
+        // Обрабатываем ответ (одинаково для обоих методов)
+        try {
             const answer = await response.json();
-            console.log('📥 Получен SDP answer:', answer);
             
             if (answer.error) {
                 throw new Error(answer.error);
             }
             
-            // Устанавливаем удаленное описание
-            if (answer.sdp) {
-                console.log('📝 Устанавливаем удаленный SDP');
-                
-                // Модифицируем SDP answer для лучшей работы с мобильными сетями
-                let remoteSdp = answer.sdp;
-                
-                // Для мобильных сетей принудительно используем TCP
-                if (isMobileConnection) {
-                    remoteSdp = remoteSdp.replace(/a=candidate:.*UDP.*\r\n/g, '');
-                }
-                
-                await pc.setRemoteDescription(new RTCSessionDescription({
-                    type: answer.type || 'answer',
-                    sdp: remoteSdp
-                }));
-                console.log('📝 Удаленный SDP установлен');
-                
-                // Перебираем активные трансиверы и проверяем состояние
-                pc.getTransceivers().forEach(transceiver => {
-                    console.log(`📡 Трансивер: ${transceiver.mid}, Направление: ${transceiver.direction}, Текущее направление: ${transceiver.currentDirection}`);
-                });
-                
-                // Таймаут для проверки установки соединения
-                setTimeout(() => {
-                    if (pc.iceConnectionState !== 'connected' && pc.iceConnectionState !== 'completed') {
-                        console.warn('⚠️ Медленное соединение, проверяем статус:', pc.iceConnectionState);
-                        
-                        // Если соединение в процессе - показываем сообщение
-                        if (pc.iceConnectionState === 'checking') {
-                            showLoadingIndicator(videoContainer, 'Соединение устанавливается... Ждите');
-                        }
-                        // Если проблема с соединением - пытаемся переподключиться
-                        else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
-                            console.error('⏱️ Таймаут соединения: ', pc.iceConnectionState);
-                            // Для мобильных сетей увеличиваем тайминги
-                            if (isMobileConnection) {
-                                showLoadingIndicator(videoContainer, 'Мобильное соединение медленное. Подождите...');
-                                setTimeout(() => {
-                                    if (pc.iceConnectionState !== 'connected' && pc.iceConnectionState !== 'completed') {
-                                        tryReconnect(channelId);
-                                    }
-                                }, 10000); // Увеличиваем задержку для мобильных сетей
-                            } else {
-                                tryReconnect(channelId);
-                            }
-                        }
-                    }
-                }, isMobileConnection ? 15000 : 10000); // Увеличиваем время ожидания для мобильных сетей
-            } else {
-                console.error('❌ SDP отсутствует в ответе');
+            if (!answer.sdp) {
                 throw new Error('SDP отсутствует в ответе');
             }
+            
+            console.log('📝 Устанавливаем удаленный SDP');
+            await pc.setRemoteDescription(new RTCSessionDescription(answer));
+            console.log('✅ Удаленный SDP установлен');
+            
         } catch (error) {
-            console.error('❌ Ошибка при отправке/получении SDP:', error);
-            throw error;
+            console.error('❌ Ошибка при обработке SDP ответа:', error);
+            showErrorOverlay(videoContainer, 'Ошибка соединения: ' + error.message);
+            return;
         }
         
         // Очищаем контейнер и добавляем видео
@@ -443,75 +401,284 @@ async function startWebRTCStream(channelId, streamData) {
         videoContainer.appendChild(videoElement);
         currentVideoElement = videoElement;
         
-        // Добавляем информационную панель и другие элементы интерфейса
-        addVideoUIElements(videoContainer, channelId, streamData, isMobileConnection);
+        // Для мобильных устройств добавляем обработчик клика для автозапуска видео
+        videoElement.addEventListener('click', () => {
+            if (videoElement.paused) {
+                videoElement.play().catch(e => console.error('Ошибка при воспроизведении:', e));
+            }
+        });
         
-    } catch (error) {
-        console.error('❌ WebRTC ошибка:', error);
-        showErrorOverlay(videoContainer, 'WebRTC ошибка: ' + error.message);
-        throw new Error('WebRTC ошибка: ' + error.message);
-    }
+        // Добавляем информационную панель с типом соединения
+        const infoPanel = document.createElement('div');
+        infoPanel.className = 'video-info-panel';
+        infoPanel.innerHTML = 
+            '<div class="video-info">' +
+                '<span>📺 ' + (streamData.channel_name || 'Канал ' + channelId) + '</span>' +
+                '<span>🔴 Прямой эфир' + (useDirectConnection ? ' (Прямое соединение)' : '') + '</span>' +
+                '<span>' + (isMobile ? '📱 Мобильное соединение' : '🖥️ WiFi/Проводное соединение') + '</span>' +
+            '</div>';
+        videoContainer.appendChild(infoPanel);
+        
+        // Добавляем кнопку перезагрузки видео
+        const reloadButton = document.createElement('button');
+        reloadButton.className = 'reload-btn primary-btn';
+        reloadButton.style.position = 'absolute';
+        reloadButton.style.bottom = '20px';
+        reloadButton.style.left = '20px';
+        reloadButton.style.zIndex = '100';
+        reloadButton.textContent = '🔄 Перезагрузить видео';
+        reloadButton.onclick = () => {
+            stopCurrentStream();
+            startLiveStream();
+        };
+        videoContainer.appendChild(reloadButton);
+        
+        // Кнопка переключения качества (если это не общий канал)
+        if (channelId !== "1") {
+            // Определяем текущее качество
+            const isHighQuality = channelId.endsWith('01');
+            const qualityButton = document.createElement('button');
+            qualityButton.style.position = 'absolute';
+           qualityButton.style.bottom = '20px';
+           qualityButton.style.right = '20px';
+           qualityButton.style.padding = '8px 16px';
+           qualityButton.style.borderRadius = '4px';
+           qualityButton.style.fontSize = '12px';
+           qualityButton.style.color = 'white';
+           qualityButton.style.background = 'rgba(52, 152, 219, 0.7)';
+           qualityButton.style.border = 'none';
+           qualityButton.style.cursor = 'pointer';
+           qualityButton.style.zIndex = '100';
+           
+           qualityButton.textContent = isHighQuality ? 
+               '🔎 Высокое качество' : '🔍 Низкое качество';
+           
+           qualityButton.onclick = () => {
+               let newChannelId = channelId;
+               if (channelId.endsWith('01')) {
+                   // Переключаемся с HD на SD
+                   newChannelId = channelId.slice(0, -2) + '02';
+               } else if (channelId.endsWith('02')) {
+                   // Переключаемся с SD на HD
+                   newChannelId = channelId.slice(0, -2) + '01';
+               }
+               
+               if (newChannelId !== channelId) {
+                   console.log(`🔄 Переключение качества с ${channelId} на ${newChannelId}`);
+                   cameraSelect.value = newChannelId;
+                   stopCurrentStream();
+                   startLiveStream();
+               }
+           };
+           
+           videoContainer.appendChild(qualityButton);
+       }
+       
+       // Статус соединения
+       const connectionStatus = document.createElement('div');
+       connectionStatus.className = 'connection-status';
+       connectionStatus.style.position = 'absolute';
+       connectionStatus.style.top = '10px';
+       connectionStatus.style.right = '10px';
+       connectionStatus.style.padding = '5px 10px';
+       connectionStatus.style.borderRadius = '4px';
+       connectionStatus.style.fontSize = '12px';
+       connectionStatus.style.color = 'white';
+       connectionStatus.style.background = 'rgba(0, 0, 0, 0.5)';
+       connectionStatus.style.zIndex = '100';
+       connectionStatus.textContent = '🔄 Установка соединения...';
+       videoContainer.appendChild(connectionStatus);
+       
+       // Обновляем статус соединения при изменении
+       pc.addEventListener('iceconnectionstatechange', () => {
+           if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+               connectionStatus.textContent = '✅ Соединение установлено';
+               connectionStatus.style.background = 'rgba(46, 204, 113, 0.5)';
+           } else if (pc.iceConnectionState === 'checking') {
+               connectionStatus.textContent = '🔄 Проверка соединения...';
+               connectionStatus.style.background = 'rgba(241, 196, 15, 0.5)';
+           } else if (pc.iceConnectionState === 'disconnected') {
+               connectionStatus.textContent = '⚠️ Соединение нестабильно';
+               connectionStatus.style.background = 'rgba(230, 126, 34, 0.5)';
+           } else if (pc.iceConnectionState === 'failed') {
+               connectionStatus.textContent = '❌ Ошибка соединения';
+               connectionStatus.style.background = 'rgba(231, 76, 60, 0.5)';
+           }
+       });
+       
+       // Устанавливаем таймер для проверки успешности соединения
+       setTimeout(() => {
+           if (pc.iceConnectionState !== 'connected' && pc.iceConnectionState !== 'completed') {
+               console.warn('⏱️ Медленное соединение:', pc.iceConnectionState);
+               
+               if (pc.iceConnectionState === 'failed') {
+                   console.error('❌ Соединение не установлено');
+                   showErrorOverlay(videoContainer, 'Не удалось установить соединение. Попробуйте перезагрузить видео');
+               } else if (pc.iceConnectionState === 'checking') {
+                   // Продолжаем ждать, но обновляем статус
+                   showLoadingIndicator(videoContainer, 'Соединение устанавливается медленно. Пожалуйста, подождите...');
+               }
+           }
+       }, 15000); // 15 секунд
+       
+   } catch (error) {
+       console.error('❌ Ошибка WebRTC:', error);
+       showErrorOverlay(videoContainer, 'Ошибка подключения: ' + error.message);
+   }
 }
-   /**
- * Остановка текущего потока
- */
+
+/**
+* Определение мобильной сети
+*/
+function detectMobileNetwork() {
+   // Проверка через Network Information API
+   if (navigator.connection) {
+       const connection = navigator.connection;
+       const isMobile = 
+           connection.type === 'cellular' || 
+           connection.effectiveType === '3g' || 
+           connection.effectiveType === '2g' ||
+           connection.downlink < 2;
+       
+       console.log('📱 Тип соединения:', connection.type);
+       console.log('📡 Эффективный тип:', connection.effectiveType);
+       console.log('⚡ Пропускная способность:', connection.downlink, 'Мбит/с');
+       
+       return isMobile;
+   }
+   
+   // Резервный вариант: проверка через User-Agent
+   const userAgent = navigator.userAgent;
+   const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+   const isMobileBrowser = mobileRegex.test(userAgent);
+   
+   return isMobileBrowser;
+}
+
+/**
+* Настройка базовых обработчиков событий WebRTC
+*/
+function setupWebRTCEventHandlers(pc, videoElement) {
+   // Основные события соединения
+   pc.addEventListener('iceconnectionstatechange', () => {
+       console.log('📢 Состояние ICE соединения:', pc.iceConnectionState);
+       
+       if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+           hideLoadingIndicator(videoContainer);
+           updateConnectionStatus('online');
+       } else if (pc.iceConnectionState === 'checking') {
+           showLoadingIndicator(videoContainer, 'Проверка соединения...');
+           updateConnectionStatus('connecting');
+       } else if (pc.iceConnectionState === 'disconnected') {
+           showLoadingIndicator(videoContainer, 'Переподключение...');
+           updateConnectionStatus('connecting');
+       } else if (pc.iceConnectionState === 'failed') {
+           showErrorOverlay(videoContainer, 'Не удалось установить соединение');
+           updateConnectionStatus('offline');
+       }
+   });
+   
+   pc.addEventListener('connectionstatechange', () => {
+       console.log('📢 Состояние соединения:', pc.connectionState);
+   });
+   
+   // Обработчик получения медиа потока
+   pc.ontrack = (event) => {
+       console.log('📺 Получен медиа трек:', event.track.kind);
+       
+       if (event.streams && event.streams[0]) {
+           videoElement.srcObject = event.streams[0];
+           currentStream = event.streams[0];
+           
+           // Обработчики событий для видео
+           videoElement.onloadedmetadata = () => {
+               console.log('📐 Размер видео:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+               videoElement.play().catch(err => {
+                   console.warn('⚠️ Автовоспроизведение не удалось:', err);
+                   // Добавляем подсказку о необходимости нажать на видео
+                   const playHint = document.createElement('div');
+                   playHint.style.position = 'absolute';
+                   playHint.style.top = '50%';
+                   playHint.style.left = '50%';
+                   playHint.style.transform = 'translate(-50%, -50%)';
+                   playHint.style.background = 'rgba(0, 0, 0, 0.7)';
+                   playHint.style.color = 'white';
+                   playHint.style.padding = '15px 20px';
+                   playHint.style.borderRadius = '5px';
+                   playHint.style.fontSize = '16px';
+                   playHint.style.zIndex = '100';
+                   playHint.textContent = 'Нажмите для воспроизведения';
+                   videoContainer.appendChild(playHint);
+                   
+                   // Удаляем подсказку при клике
+                   videoContainer.addEventListener('click', () => {
+                       videoElement.play().catch(e => console.error('Ошибка воспроизведения:', e));
+                       if (playHint.parentNode) {
+                           playHint.parentNode.removeChild(playHint);
+                       }
+                   }, { once: true });
+               });
+           };
+           
+           videoElement.onplaying = () => {
+               console.log('▶️ Видео воспроизводится');
+               hideLoadingIndicator(videoContainer);
+           };
+           
+           videoElement.onerror = (error) => {
+               console.error('❌ Ошибка видео:', error);
+               showErrorOverlay(videoContainer, 'Ошибка воспроизведения видео');
+           };
+       }
+   };
+   
+   // Логирование ICE кандидатов
+   pc.onicecandidate = (event) => {
+       if (event.candidate) {
+           console.log('🧊 ICE кандидат:', 
+               event.candidate.type, 
+               event.candidate.protocol, 
+               event.candidate.address);
+       } else {
+           console.log('🧊 Сбор ICE кандидатов завершен');
+       }
+   };
+}
+
 function stopCurrentStream() {
-    // Остановка WebRTC соединения
+    // Останавливаем WebRTC соединение
     if (currentRTCPeerConnection) {
         try {
-            // Закрываем WebRTC соединение
-            currentRTCPeerConnection.getSenders().forEach(sender => {
-                if (sender.track) {
-                    sender.track.stop();
-                }
-            });
-            
-            currentRTCPeerConnection.getReceivers().forEach(receiver => {
-                if (receiver.track) {
-                    receiver.track.stop();
-                }
-            });
-            
             currentRTCPeerConnection.close();
         } catch (e) {
             console.error('Ошибка при закрытии WebRTC соединения:', e);
         }
-        
         currentRTCPeerConnection = null;
     }
     
-    // Остановка медиа-потоков
+    // Останавливаем медиа-потоки
     if (currentStream) {
         try {
-            currentStream.getTracks().forEach(function(track) {
-                track.stop();
-            });
+            currentStream.getTracks().forEach(track => track.stop());
         } catch (e) {
             console.error('Ошибка при остановке медиа-потоков:', e);
         }
-        
         currentStream = null;
     }
     
-    // Очистка видео-элемента
+    // Очищаем видео-элемент
     if (currentVideoElement) {
         try {
             if (currentVideoElement.srcObject) {
-                currentVideoElement.srcObject.getTracks().forEach(track => track.stop());
                 currentVideoElement.srcObject = null;
-            }
-            
-            if (currentVideoElement.parentNode) {
-                currentVideoElement.parentNode.removeChild(currentVideoElement);
             }
         } catch (e) {
             console.error('Ошибка при очистке видео-элемента:', e);
         }
-        
         currentVideoElement = null;
     }
     
-    // Обновление статуса соединения
+    // Обновляем статус соединения
     updateConnectionStatus('offline');
     
     console.log('🛑 Текущий поток остановлен');
@@ -951,65 +1118,67 @@ function init() {
     // Запуск приложения
     init();
     /**
- * Показывает индикатор загрузки внутри указанного контейнера
+/**
+ * Показывает упрощенный индикатор загрузки для мобильных устройств
  */
 function showLoadingIndicator(container, message) {
-    // Проверяем, существует ли уже индикатор
-    let loadingIndicator = container.querySelector('.video-loading-indicator');
+    // Удаляем предыдущие индикаторы, если они есть
+    hideLoadingIndicator(container);
     
-    if (!loadingIndicator) {
-        loadingIndicator = document.createElement('div');
-        loadingIndicator.className = 'video-loading-indicator';
-        loadingIndicator.style.position = 'absolute';
-        loadingIndicator.style.top = '50%';
-        loadingIndicator.style.left = '50%';
-        loadingIndicator.style.transform = 'translate(-50%, -50%)';
-        loadingIndicator.style.background = 'rgba(0, 0, 0, 0.7)';
-        loadingIndicator.style.color = 'white';
-        loadingIndicator.style.padding = '15px 20px';
-        loadingIndicator.style.borderRadius = '5px';
-        loadingIndicator.style.textAlign = 'center';
-        loadingIndicator.style.zIndex = '1000';
-        
-        const spinner = document.createElement('div');
-        spinner.style.width = '30px';
-        spinner.style.height = '30px';
-        spinner.style.borderRadius = '50%';
-        spinner.style.border = '3px solid rgba(255, 255, 255, 0.3)';
-        spinner.style.borderTopColor = '#fff';
-        spinner.style.margin = '0 auto 10px';
-        spinner.style.animation = 'spin 1s linear infinite';
-        
-        if (!document.querySelector('style#loading-animation')) {
-            const style = document.createElement('style');
-            style.id = 'loading-animation';
-            style.textContent = `
-                @keyframes spin { 
-                    to { transform: rotate(360deg); }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-        
-        loadingIndicator.appendChild(spinner);
-        
-        const text = document.createElement('div');
-        text.textContent = message || 'Загрузка...';
-        loadingIndicator.appendChild(text);
-        
-        container.appendChild(loadingIndicator);
-    } else {
-        // Обновляем сообщение, если индикатор уже существует
-        const textElement = loadingIndicator.querySelector('div:last-child');
-        if (textElement) {
-            textElement.textContent = message || 'Загрузка...';
-        }
-        
-        // Показываем существующий индикатор
-        loadingIndicator.style.display = 'block';
+    const loadingIndicator = document.createElement('div');
+    loadingIndicator.className = 'video-loading-indicator';
+    loadingIndicator.style.position = 'absolute';
+    loadingIndicator.style.top = '50%';
+    loadingIndicator.style.left = '50%';
+    loadingIndicator.style.transform = 'translate(-50%, -50%)';
+    loadingIndicator.style.background = 'rgba(0, 0, 0, 0.7)';
+    loadingIndicator.style.color = 'white';
+    loadingIndicator.style.padding = '15px 20px';
+    loadingIndicator.style.borderRadius = '5px';
+    loadingIndicator.style.textAlign = 'center';
+    loadingIndicator.style.zIndex = '1000';
+    
+    const spinner = document.createElement('div');
+    spinner.style.width = '20px';
+    spinner.style.height = '20px';
+    spinner.style.margin = '0 auto 10px';
+    spinner.style.border = '3px solid rgba(255, 255, 255, 0.3)';
+    spinner.style.borderRadius = '50%';
+    spinner.style.borderTop = '3px solid #fff';
+    spinner.style.animation = 'spin 1s linear infinite';
+    
+    // Добавляем стиль анимации, если его еще нет
+    if (!document.querySelector('style#loading-animation')) {
+        const style = document.createElement('style');
+        style.id = 'loading-animation';
+        style.textContent = `
+            @keyframes spin { 
+                to { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
     }
+    
+    const text = document.createElement('div');
+    text.textContent = message || 'Загрузка...';
+    
+    loadingIndicator.appendChild(spinner);
+    loadingIndicator.appendChild(text);
+    
+    container.appendChild(loadingIndicator);
 }
 
+/**
+ * Скрывает индикатор загрузки
+ */
+function hideLoadingIndicator(container) {
+    const indicators = container.querySelectorAll('.video-loading-indicator');
+    indicators.forEach(indicator => {
+        if (indicator.parentNode === container) {
+            container.removeChild(indicator);
+        }
+    });
+}
 /**
  * Скрывает индикатор загрузки
  */
@@ -1064,74 +1233,56 @@ function showStreamingIndicator(container) {
 }
 
 /**
- * Показывает сообщение об ошибке
+ * Показывает простое сообщение об ошибке без лишних элементов
  */
 function showErrorOverlay(container, message) {
-    // Проверяем, существует ли уже оверлей
-    let errorOverlay = container.querySelector('.error-overlay');
+    // Упрощенный вариант для мобильных устройств
+    let errorOverlay = document.createElement('div');
+    errorOverlay.style.position = 'absolute';
+    errorOverlay.style.top = '50%';
+    errorOverlay.style.left = '50%';
+    errorOverlay.style.transform = 'translate(-50%, -50%)';
+    errorOverlay.style.background = 'rgba(231, 76, 60, 0.9)';
+    errorOverlay.style.color = 'white';
+    errorOverlay.style.padding = '15px 20px';
+    errorOverlay.style.borderRadius = '5px';
+    errorOverlay.style.textAlign = 'center';
+    errorOverlay.style.zIndex = '1000';
+    errorOverlay.style.maxWidth = '80%';
     
-    if (!errorOverlay) {
-        errorOverlay = document.createElement('div');
-        errorOverlay.className = 'error-overlay';
-        errorOverlay.style.position = 'absolute';
-        errorOverlay.style.top = '0';
-        errorOverlay.style.left = '0';
-        errorOverlay.style.width = '100%';
-        errorOverlay.style.height = '100%';
-        errorOverlay.style.background = 'rgba(231, 76, 60, 0.8)';
-        errorOverlay.style.color = 'white';
-        errorOverlay.style.display = 'flex';
-        errorOverlay.style.flexDirection = 'column';
-        errorOverlay.style.alignItems = 'center';
-        errorOverlay.style.justifyContent = 'center';
-        errorOverlay.style.textAlign = 'center';
-        errorOverlay.style.zIndex = '1000';
-        errorOverlay.style.padding = '20px';
+    const text = document.createElement('div');
+    text.textContent = message || 'Произошла ошибка';
+    text.style.marginBottom = '10px';
+    
+    const retryButton = document.createElement('button');
+    retryButton.textContent = '🔄 Перезагрузить';
+    retryButton.style.padding = '8px 16px';
+    retryButton.style.border = 'none';
+    retryButton.style.borderRadius = '4px';
+    retryButton.style.background = 'white';
+    retryButton.style.color = '#e74c3c';
+    retryButton.style.cursor = 'pointer';
+    
+    retryButton.onclick = () => {
+        // Удаляем элемент ошибки
+        container.removeChild(errorOverlay);
         
-        const icon = document.createElement('div');
-        icon.textContent = '❌';
-        icon.style.fontSize = '48px';
-        icon.style.marginBottom = '10px';
-        
-        const text = document.createElement('div');
-        text.textContent = message || 'Произошла ошибка';
-        text.style.fontSize = '16px';
-        
-        const retryButton = document.createElement('button');
-        retryButton.textContent = '🔄 Повторить';
-        retryButton.style.marginTop = '20px';
-        retryButton.style.padding = '10px 20px';
-        retryButton.style.borderRadius = '5px';
-        retryButton.style.border = 'none';
-        retryButton.style.background = 'white';
-        retryButton.style.color = '#e74c3c';
-        retryButton.style.cursor = 'pointer';
-        retryButton.style.fontWeight = 'bold';
-        
-        retryButton.onclick = () => {
-            errorOverlay.style.display = 'none';
-            const channelId = cameraSelect.value;
-            if (channelId) {
-                stopCurrentStream();
-                startLiveStream();
-            }
-        };
-        
-        errorOverlay.appendChild(icon);
-        errorOverlay.appendChild(text);
-        errorOverlay.appendChild(retryButton);
-        
-        container.appendChild(errorOverlay);
-    } else {
-        // Обновляем сообщение, если оверлей уже существует
-        const textElement = errorOverlay.querySelector('div:nth-child(2)');
-        if (textElement) {
-            textElement.textContent = message || 'Произошла ошибка';
+        // Перезапускаем поток
+        const channelId = cameraSelect.value;
+        if (channelId) {
+            stopCurrentStream();
+            startLiveStream();
         }
-        
-        // Показываем существующий оверлей
-        errorOverlay.style.display = 'flex';
-    }
+    };
+    
+    errorOverlay.appendChild(text);
+    errorOverlay.appendChild(retryButton);
+    
+    // Удаляем предыдущие ошибки, если они есть
+    const oldErrors = container.querySelectorAll('[class^="error"]');
+    oldErrors.forEach(el => container.removeChild(el));
+    
+    container.appendChild(errorOverlay);
 }
 
 /**
@@ -1298,7 +1449,7 @@ function setupWebRTCEventHandlers(pc, videoElement) {
 /**
  * Добавляет элементы интерфейса для видео
  */
-function addVideoUIElements(container, channelId, streamData, isMobile) {
+function addVideoUI(container, channelId, streamData, isMobile) {
     // Добавляем информационную панель
     const infoPanel = document.createElement('div');
     infoPanel.className = 'video-info-panel';
@@ -1308,9 +1459,6 @@ function addVideoUIElements(container, channelId, streamData, isMobile) {
             '<span>🔴 Прямой эфир' + (isMobile ? ' (Мобильное соединение)' : '') + '</span>' +
         '</div>';
     container.appendChild(infoPanel);
-    
-    // Добавляем контролы
-    addVideoControls(container);
     
     // Добавляем кнопку перезагрузки видео
     const reloadButton = document.createElement('button');
@@ -1326,60 +1474,49 @@ function addVideoUIElements(container, channelId, streamData, isMobile) {
     };
     container.appendChild(reloadButton);
     
-    // Добавляем индикатор соединения
-    const connectionIndicator = document.createElement('div');
-    connectionIndicator.className = 'connection-indicator';
-    connectionIndicator.style.position = 'absolute';
-    connectionIndicator.style.top = '10px';
-    connectionIndicator.style.right = '10px';
-    connectionIndicator.style.padding = '5px 10px';
-    connectionIndicator.style.borderRadius = '4px';
-    connectionIndicator.style.fontSize = '12px';
-    connectionIndicator.style.color = 'white';
-    connectionIndicator.style.background = 'rgba(0, 0, 0, 0.5)';
-    connectionIndicator.style.zIndex = '100';
-    connectionIndicator.textContent = '🔄 Установка соединения...';
-    container.appendChild(connectionIndicator);
+    // Добавляем индикатор типа соединения
+    const connectionType = document.createElement('div');
+    connectionType.style.position = 'absolute';
+    connectionType.style.top = '50px';
+    connectionType.style.right = '10px';
+    connectionType.style.padding = '5px 10px';
+    connectionType.style.borderRadius = '4px';
+    connectionType.style.fontSize = '12px';
+    connectionType.style.color = 'white';
+    connectionType.style.background = isMobile ? 
+        'rgba(255, 165, 0, 0.7)' : 'rgba(46, 204, 113, 0.7)';
+    connectionType.style.zIndex = '100';
+    connectionType.textContent = isMobile ? '📱 Мобильное соединение' : '🖥️ WiFi соединение';
+    container.appendChild(connectionType);
     
-    // Добавляем для мобильных специальные элементы
-    if (isMobile) {
-        const mobileInfo = document.createElement('div');
-        mobileInfo.className = 'mobile-info';
-        mobileInfo.style.position = 'absolute';
-        mobileInfo.style.top = '40px';
-        mobileInfo.style.right = '10px';
-        mobileInfo.style.padding = '5px 10px';
-        mobileInfo.style.borderRadius = '4px';
-        mobileInfo.style.fontSize = '12px';
-        mobileInfo.style.color = 'white';
-        mobileInfo.style.background = 'rgba(255, 165, 0, 0.7)';
-        mobileInfo.style.zIndex = '100';
-        mobileInfo.textContent = '📱 Мобильное соединение';
-        container.appendChild(mobileInfo);
+    // Кнопка качества (HD/SD)
+    if (channelId.length > 2) { // Только для каналов с возможностью переключения качества
+        const qualityButton = document.createElement('button');
+        qualityButton.style.position = 'absolute';
+        qualityButton.style.top = '90px';
+        qualityButton.style.right = '10px';
+        qualityButton.style.padding = '5px 10px';
+        qualityButton.style.borderRadius = '4px';
+        qualityButton.style.fontSize = '12px';
+        qualityButton.style.color = 'white';
+        qualityButton.style.background = 'rgba(52, 152, 219, 0.7)';
+        qualityButton.style.border = 'none';
+        qualityButton.style.cursor = 'pointer';
+        qualityButton.style.zIndex = '100';
         
-        // Уменьшаем качество для мобильных
-        const qualitySwitch = document.createElement('button');
-        qualitySwitch.className = 'quality-switch';
-        qualitySwitch.style.position = 'absolute';
-        qualitySwitch.style.top = '70px';
-        qualitySwitch.style.right = '10px';
-        qualitySwitch.style.padding = '5px 10px';
-        qualitySwitch.style.borderRadius = '4px';
-        qualitySwitch.style.fontSize = '12px';
-        qualitySwitch.style.color = 'white';
-        qualitySwitch.style.background = 'rgba(52, 152, 219, 0.7)';
-        qualitySwitch.style.border = 'none';
-        qualitySwitch.style.cursor = 'pointer';
-        qualitySwitch.style.zIndex = '100';
-        qualitySwitch.textContent = '🔍 Низкое качество';
-        qualitySwitch.onclick = () => {
-            // Изменение ID канала для переключения качества
-            // Например, с HD (x01) на SD (x02)
+        // Определяем текущее качество
+        const isHighQuality = channelId.endsWith('01');
+        qualityButton.textContent = isHighQuality ? 
+            '🔎 Высокое качество' : '🔍 Низкое качество';
+        
+        qualityButton.onclick = () => {
             let newChannelId = channelId;
             if (channelId.endsWith('01')) {
-                newChannelId = channelId.slice(0, -2) + '02';
+                newChannelId = channelId.slice(0, -2) + '02'; // HD -> SD
+                qualityButton.textContent = '🔍 Низкое качество';
             } else if (channelId.endsWith('02')) {
-                newChannelId = channelId.slice(0, -2) + '01';
+                newChannelId = channelId.slice(0, -2) + '01'; // SD -> HD
+                qualityButton.textContent = '🔎 Высокое качество';
             }
             
             if (newChannelId !== channelId) {
@@ -1388,29 +1525,8 @@ function addVideoUIElements(container, channelId, streamData, isMobile) {
                 startLiveStream();
             }
         };
-        container.appendChild(qualitySwitch);
-    }
-    
-    // Обновляем индикатор при изменении состояния
-    if (currentRTCPeerConnection) {
-        const updateIndicator = () => {
-            if (currentRTCPeerConnection.iceConnectionState === 'connected' || 
-                currentRTCPeerConnection.iceConnectionState === 'completed') {
-                connectionIndicator.textContent = '✅ Соединение установлено';
-                connectionIndicator.style.background = 'rgba(46, 204, 113, 0.5)';
-            } else if (currentRTCPeerConnection.iceConnectionState === 'checking') {
-                connectionIndicator.textContent = '🔄 Проверка соединения...';
-                connectionIndicator.style.background = 'rgba(241, 196, 15, 0.5)';
-            } else if (currentRTCPeerConnection.iceConnectionState === 'disconnected') {
-                connectionIndicator.textContent = '⚠️ Соединение нестабильно';
-                connectionIndicator.style.background = 'rgba(230, 126, 34, 0.5)';
-            } else if (currentRTCPeerConnection.iceConnectionState === 'failed') {
-                connectionIndicator.textContent = '❌ Ошибка соединения';
-                connectionIndicator.style.background = 'rgba(231, 76, 60, 0.5)';
-            }
-        };
         
-        currentRTCPeerConnection.addEventListener('iceconnectionstatechange', updateIndicator);
+        container.appendChild(qualityButton);
     }
 }
 
@@ -1498,4 +1614,31 @@ function handleMobileConnection() {
    document.body.appendChild(connectionTypeElement);
 }
 
+/**
+ * Определение мобильной сети
+ */
+function detectMobileNetwork() {
+    // Проверка через Network Information API
+    if (navigator.connection) {
+        const connection = navigator.connection;
+        const isMobile = 
+            connection.type === 'cellular' || 
+            connection.effectiveType === '3g' || 
+            connection.effectiveType === '2g' ||
+            connection.downlink < 2;
+        
+        console.log('📱 Тип соединения:', connection.type);
+        console.log('📡 Эффективный тип:', connection.effectiveType);
+        console.log('⚡ Пропускная способность:', connection.downlink, 'Мбит/с');
+        
+        return isMobile;
+    }
+    
+    // Резервный вариант: проверка через User-Agent
+    const userAgent = navigator.userAgent;
+    const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+    const isMobileBrowser = mobileRegex.test(userAgent);
+    
+    return isMobileBrowser;
+}
 });

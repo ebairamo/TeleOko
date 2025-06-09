@@ -15,8 +15,8 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Функция для вывода с цветом
-print_status() {
+# Функции для цветного вывода
+print_success() {
     echo -e "${GREEN}✅ $1${NC}"
 }
 
@@ -40,7 +40,7 @@ check_go() {
     fi
     
     GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
-    print_status "Go версия: $GO_VERSION"
+    print_success "Go версия: $GO_VERSION"
 }
 
 # Проверка ngrok
@@ -50,7 +50,7 @@ check_ngrok() {
         print_warning "Внешний доступ через интернет будет недоступен."
         USE_NGROK=false
     else
-        print_status "ngrok найден и будет использован для внешнего доступа"
+        print_success "ngrok найден и будет использован для внешнего доступа"
         USE_NGROK=true
     fi
 }
@@ -71,7 +71,7 @@ check_ports() {
                 exit 1
             fi
         else
-            print_status "Порт $port свободен"
+            print_success "Порт $port свободен"
         fi
     done
 }
@@ -102,6 +102,11 @@ create_default_config() {
         "password": "password"
     },
     "channels": [
+        {
+            "id": "1",
+            "name": "🎥 Общий план",
+            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1"
+        },
         {
             "id": "102",
             "name": "📹 Камера 1",
@@ -185,19 +190,23 @@ create_default_config() {
     ]
 }
 EOF
-        print_status "Файл config.json создан"
+        print_success "Файл config.json создан"
         print_warning "Отредактируйте config.json для настройки ваших камер!"
     else
-        print_status "Конфигурация найдена: config.json"
+        print_success "Конфигурация найдена: config.json"
     fi
 }
 
-# Обновление конфигурации go2rtc для работы с ngrok
+# Обновление конфигурации go2rtc
 update_go2rtc_config() {
     print_info "Обновление конфигурации go2rtc для работы через интернет..."
     
     cat > go2rtc.yaml << 'EOF'
+# Универсальная конфигурация go2rtc для работы через любые сети
 streams:
+  # Общий канал
+  1: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1
+  # Стандартные каналы
   102: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/102
   202: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/202
   302: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/302
@@ -215,27 +224,46 @@ streams:
   1502: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1502
   1602: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1602
 
+# API настройки - разрешаем доступ с любых доменов
+api:
+  listen: :1984
+  origin: "*"
+  cors: true
+
+# WebRTC настройки для универсальной работы
 webrtc:
   listen: :1984
-  # Добавляем больше STUN серверов для надежности
+  
+  # Настройки для работы через любые сети
+  tcp: true
+  drop_late: true
+  
+  # Активируем все типы кандидатов
   candidates:
     - stun:stun.l.google.com:19302
     - stun:stun1.l.google.com:19302
-    - stun:stun2.l.google.com:19302
-    - stun:stun3.l.google.com:19302
-    - stun:stun4.l.google.com:19302
-  # Настройка для работы через ngrok
+    - stun:stun.stunprotocol.org:3478
+    
+  # ICE серверы для всех типов сетей  
   ice_servers:
-    - urls: [stun:stun.l.google.com:19302, stun:stun1.l.google.com:19302]
-  # Отключаем использование локальных кандидатов при подключении через интернет
-  ice_host: false
-
-api:
-  listen: :1984
-  # Разрешаем CORS для доступа из любого источника
-  cors: true
+    # STUN серверы
+    - urls:
+      - stun:stun.l.google.com:19302
+      - stun:stun1.l.google.com:19302
+      - stun:stun2.l.google.com:19302
+      - stun:stun3.l.google.com:19302
+      - stun:stun4.l.google.com:19302
+      
+    # TURN серверы через TCP и UDP
+    - urls:
+      - turn:openrelay.metered.ca:80?transport=tcp
+      - turn:openrelay.metered.ca:443?transport=tcp
+      - turn:openrelay.metered.ca:80
+      - turn:openrelay.metered.ca:443
+      username: openrelayproject
+      credential: openrelayproject
 EOF
-    print_status "Конфигурация go2rtc обновлена для работы через интернет"
+    print_success "Конфигурация go2rtc обновлена для работы через интернет"
 }
 
 # Сборка приложения
@@ -243,11 +271,11 @@ build_app() {
     print_info "Проверка необходимости сборки..."
     
     # Проверяем, есть ли бинарник и актуален ли он
-    if [ -f "teleoko" ]; then
+    if [ -f "teleoko" ] || [ -f "teleoko.exe" ]; then
         # Проверяем время модификации исходников
         NEWEST_SOURCE=$(find . -name "*.go" -newer "teleoko" 2>/dev/null | head -1)
         if [ -z "$NEWEST_SOURCE" ]; then
-            print_status "Бинарник актуален, сборка не требуется"
+            print_success "Бинарник актуален, сборка не требуется"
             return 0
         fi
     fi
@@ -261,7 +289,7 @@ build_app() {
     # Собираем
     print_info "Компиляция..."
     if go build -ldflags="-s -w" -o teleoko ./cmd/server; then
-        print_status "Приложение успешно собрано"
+        print_success "Приложение успешно собрано"
     else
         print_error "Ошибка сборки приложения!"
         exit 1
@@ -283,7 +311,7 @@ test_camera_connection() {
     fi
     
     if ping -c 1 -W 3 "$CAMERA_IP" &> /dev/null; then
-        print_status "Камера $CAMERA_IP доступна"
+        print_success "Камера $CAMERA_IP доступна"
     else
         print_warning "Камера $CAMERA_IP недоступна"
         print_info "Убедитесь, что:"
@@ -293,7 +321,7 @@ test_camera_connection() {
     fi
 }
 
-# Запуск ngrok в фоновом режиме
+# Запуск ngrok в фоновом режиме и сохранение URL в файл
 start_ngrok() {
     if [ "$USE_NGROK" = true ]; then
         print_info "Запуск ngrok для внешнего доступа..."
@@ -304,12 +332,12 @@ start_ngrok() {
         # Запускаем ngrok для веб-сервера
         ngrok http 8082 > /dev/null &
         NGROK_WEB_PID=$!
-        print_status "ngrok запущен для порта 8082 (веб-интерфейс)"
+        print_success "ngrok запущен для порта 8082 (веб-интерфейс)"
         
         # Запускаем ngrok для go2rtc
         ngrok http 1984 > /dev/null &
         NGROK_GO2RTC_PID=$!
-        print_status "ngrok запущен для порта 1984 (go2rtc WebRTC)"
+        print_success "ngrok запущен для порта 1984 (go2rtc WebRTC)"
         
         # Ждем немного, чтобы ngrok успел запуститься и получить URL
         sleep 5
@@ -318,6 +346,8 @@ start_ngrok() {
         WEB_URL=$(curl -s http://localhost:4040/api/tunnels | grep -o '"public_url":"[^"]*"' | grep -o 'http[^"]*' | head -1)
         if [ -n "$WEB_URL" ]; then
             print_info "Внешний URL для веб-интерфейса: $WEB_URL"
+            # Сохраняем URL в файл для передачи в приложение
+            echo "$WEB_URL" > web_url.txt
         else
             print_warning "Не удалось получить URL для веб-интерфейса"
         fi
@@ -327,6 +357,10 @@ start_ngrok() {
         GO2RTC_URL=$(curl -s http://localhost:4041/api/tunnels | grep -o '"public_url":"[^"]*"' | grep -o 'http[^"]*' | head -1)
         if [ -n "$GO2RTC_URL" ]; then
             print_info "Внешний URL для go2rtc: $GO2RTC_URL"
+            # Сохраняем URL в переменную окружения для передачи в приложение
+            export GO2RTC_URL="$GO2RTC_URL"
+            # Также сохраняем в файл
+            echo "$GO2RTC_URL" > go2rtc_url.txt
         else
             print_warning "Не удалось получить URL для go2rtc"
         fi
@@ -395,13 +429,12 @@ main() {
     echo ""
     show_startup_info
     
-    # Запуск приложения с логированием
-    if [ -t 1 ]; then
-        # Интерактивный режим
-        ./teleoko 2>&1 | tee teleoko.log
+    # Запуск приложения с передачей URL go2rtc через переменную окружения
+    # Экспортируем GO2RTC_URL перед запуском, если он доступен
+    if [ -n "$GO2RTC_URL" ]; then
+        GO2RTC_URL="$GO2RTC_URL" ./teleoko 2>&1 | tee teleoko.log
     else
-        # Неинтерактивный режим (например, systemd)
-        ./teleoko >> teleoko.log 2>&1
+        ./teleoko 2>&1 | tee teleoko.log
     fi
 }
 

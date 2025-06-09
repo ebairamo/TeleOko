@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeleOko - Автоподключение</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #333; }
+        .video-container { width: 100%; height: 70vh; background: #000; position: relative; margin-bottom: 20px; }
+        video { width: 100%; height: 100%; object-fit: contain; }
+        select, button { padding: 10px; margin: 10px 0; }
+        button { background: #3498db; color: white; border: none; cursor: pointer; }
+        .info { background: #f9f9f9; padding: 15px; margin-top: 20px; }
+        .error { color: red; font-weight: bold; }
+        .loading { color: white; text-align: center; padding-top: 30%; }
+        .status { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); color: white; padding: 5px 10px; border-radius: 4px; }
+        .camera-info { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); color: white; padding: 5px 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TeleOko - Автоподключение к камере</h1>
+        
+        <div>
+            <select id="cameraSelect">
+                <option value="102" selected>📹 Камера 1 (SD)</option>
+                <option value="202">📹 Камера 2 (SD)</option>
+                <option value="302">📹 Камера 3 (SD)</option>
+                <option value="402">📹 Камера 4 (SD)</option>
+                <option value="502">📹 Камера 5 (SD)</option>
+                <option value="602">📹 Камера 6 (SD)</option>
+                <option value="702">📹 Камера 7 (SD)</option>
+                <option value="802">📹 Камера 8 (SD)</option>
+                <option value="902">📹 Камера 9 (SD)</option>
+                <option value="1002">📹 Камера 10 (SD)</option>
+                <option value="1102">📹 Камера 11 (SD)</option>
+                <option value="1202">📹 Камера 12 (SD)</option>
+                <option value="1302">📹 Камера 13 (SD)</option>
+                <option value="1402">📹 Камера 14 (SD)</option>
+                <option value="1502">📹 Камера 15 (SD)</option>
+                <option value="1602">📹 Камера 16 (SD)</option>
+            </select>
+            <button id="connectBtn">Подключить</button>
+            <button id="reloadBtn" style="background: #e74c3c;">Перезагрузить</button>
+        </div>
+        
+        <div class="video-container" id="videoContainer">
+            <div class="loading">Выберите камеру и нажмите "Подключить"</div>
+        </div>
+        
+        <div class="info">
+            <h3>Информация о соединении</h3>
+            <div id="connectionInfo">Ожидание подключения</div>
+        </div>
+    </div>
+
+    <script>
+        // Элементы интерфейса
+        const videoContainer = document.getElementById('videoContainer');
+        const cameraSelect = document.getElementById('cameraSelect');
+        const connectBtn = document.getElementById('connectBtn');
+        const reloadBtn = document.getElementById('reloadBtn');
+        const connectionInfo = document.getElementById('connectionInfo');
+        
+        // Текущее соединение
+        let peerConnection = null;
+        let videoElement = null;
+        
+        // Получение URL для go2rtc из API
+        async function getGo2rtcUrl() {
+            try {
+                // Метод 1: Получаем URL из специального API-эндпоинта
+                const response = await fetch('/api/go2rtc-url');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.url) {
+                        return data.url;
+                    }
+                }
+                
+                // Метод 2: Получаем URL из системной информации
+                const infoResponse = await fetch('/api/info');
+                if (infoResponse.ok) {
+                    const infoData = await infoResponse.json();
+                    if (infoData.go2rtc_url) {
+                        return infoData.go2rtc_url;
+                    }
+                }
+                
+                // Метод 3: Пробуем получить URL через URL страницы (для ngrok)
+                const currentUrl = window.location.href;
+                if (currentUrl.includes('ngrok')) {
+                    // Для ngrok просто берем URL и изменяем порт
+                    // Например, https://aaaa-bb-cc.ngrok-free.app
+                    const match = currentUrl.match(/(https?:\/\/[a-z0-9-]+\.ngrok(?:-free)?\.(?:app|io))/i);
+                    if (match) {
+                        const baseUrl = match[1];
+                        
+                        // Проверяем, содержит ли URL порт
+                        if (baseUrl.includes(':8082')) {
+                            return baseUrl.replace(':8082', ':1984');
+                        }
+                        
+                        // Пробуем несколько URL (с разными поддоменами)
+                        // Например, если URL для веба: https://aaaa-bb-cc.ngrok-free.app
+                        // URL для go2rtc может быть: https://xxxx-bb-cc.ngrok-free.app
+                        
+                        // Извлекаем домен
+                        const domain = baseUrl.replace(/https?:\/\/[^.]+\./, '');
+                        
+                        // Пробуем получить данные от нескольких возможных URL
+                        for (const prefix of ['', 'api-', 'go2rtc-', 'rtc-']) {
+                            const testUrl = `https://${prefix}${domain}`;
+                            try {
+                                const testResponse = await fetch(`${testUrl}/api`, {
+                                    method: 'HEAD',
+                                    timeout: 1000
+                                });
+                                if (testResponse.ok) {
+                                    return testUrl;
+                                }
+                            } catch (e) {
+                                // Игнорируем ошибку и пробуем следующий URL
+                            }
+                        }
+                    }
+                }
+                
+                // Метод 4: Если ничего не сработало, используем локальный адрес
+                if (window.location.hostname === 'localhost' || 
+                    window.location.hostname === '127.0.0.1') {
+                    return 'http://localhost:1984';
+                }
+                
+                throw new Error('Не удалось получить URL для go2rtc');
+            } catch (error) {
+                console.error('Ошибка получения URL go2rtc:', error);
+                throw error;
+            }
+        }
+        
+        // Подключение к камере
+        async function connect() {
+            const channelId = cameraSelect.value;
+            if (!channelId) {
+                alert('Выберите камеру!');
+                return;
+            }
+            
+            try {
+                // Очищаем предыдущее соединение
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+                
+                if (videoElement) {
+                    if (videoElement.srcObject) {
+                        videoElement.srcObject.getTracks().forEach(track => track.stop());
+                    }
+                    videoElement.remove();
+                    videoElement = null;
+                }
+                
+                videoContainer.innerHTML = '<div class="loading">Подключение к камере...</div>';
+                connectionInfo.innerHTML = 'Подключение...';
+                
+                // Получаем URL для go2rtc
+                const go2rtcUrl = await getGo2rtcUrl();
+                console.log('Используем URL для go2rtc:', go2rtcUrl);
+                
+                // Создаем видео элемент
+                videoElement = document.createElement('video');
+                videoElement.autoplay = true;
+                videoElement.playsInline = true;
+                videoElement.muted = true;
+                videoElement.style.width = '100%';
+                videoElement.style.height = '100%';
+                
+                // Определяем мобильное соединение
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                
+                // WebRTC настройки
+                const config = {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        {
+                            urls: ['turn:openrelay.metered.ca:80?transport=tcp', 'turn:openrelay.metered.ca:443?transport=tcp'],
+                            username: 'openrelayproject',
+                            credential: 'openrelayproject'
+                        }
+                    ],
+                    iceTransportPolicy: isMobile ? 'relay' : 'all'
+                };
+                
+                // Создаем RTCPeerConnection
+                peerConnection = new RTCPeerConnection(config);
+                
+                // Обработчики событий
+                peerConnection.oniceconnectionstatechange = () => {
+                    const state = peerConnection.iceConnectionState;
+                    console.log('ICE состояние:', state);
+                    
+                    // Обновляем информацию о соединении
+                    connectionInfo.innerHTML = `
+                        <p><strong>Канал:</strong> ${channelId}</p>
+                        <p><strong>URL go2rtc:</strong> ${go2rtcUrl}</p>
+                        <p><strong>Соединение:</strong> ${isMobile ? 'Мобильное' : 'WiFi/Проводное'}</p>
+                        <p><strong>ICE состояние:</strong> ${state}</p>
+                    `;
+                    
+                    // Обновляем статус на видео
+                    updateStatus(state);
+                };
+                
+                peerConnection.ontrack = (event) => {
+                    console.log('Получен медиа-трек');
+                    if (event.streams && event.streams[0]) {
+                        videoElement.srcObject = event.streams[0];
+                        
+                        videoElement.onloadedmetadata = () => {
+                            videoElement.play().catch(err => {
+                                console.warn('Ошибка автовоспроизведения:', err);
+                                
+                                // Для мобильных устройств
+                                const playOverlay = document.createElement('div');
+                                playOverlay.style.position = 'absolute';
+                                playOverlay.style.top = '0';
+                                playOverlay.style.left = '0';
+                                playOverlay.style.width = '100%';
+                                playOverlay.style.height = '100%';
+                                playOverlay.style.background = 'rgba(0,0,0,0.5)';
+                                playOverlay.style.display = 'flex';
+                                playOverlay.style.justifyContent = 'center';
+                                playOverlay.style.alignItems = 'center';
+                                playOverlay.style.color = 'white';
+                                playOverlay.style.cursor = 'pointer';
+                                playOverlay.style.zIndex = '100';
+                                playOverlay.innerHTML = '<div style="text-align:center;"><div style="font-size:40px;">▶️</div><div>Нажмите для воспроизведения</div></div>';
+                                
+                                playOverlay.addEventListener('click', () => {
+                                    videoElement.play().catch(e => console.error('Ошибка воспроизведения:', e));
+                                    playOverlay.remove();
+                                });
+                                
+                                videoContainer.appendChild(playOverlay);
+                            });
+                        };
+                    }
+                };
+                
+                // Добавляем трансивер для получения видео
+                peerConnection.addTransceiver('video', { direction: 'recvonly' });
+                
+                // Создаем SDP offer
+                const offer = await peerConnection.createOffer({
+                    offerToReceiveVideo: true,
+                    offerToReceiveAudio: false
+                });
+                
+                await peerConnection.setLocalDescription(offer);
+                
+                // Отправляем запрос к go2rtc
+                const response = await fetch(`${go2rtcUrl}/api/webrtc?src=${channelId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: offer.type,
+                        sdp: offer.sdp
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ошибка: ${response.status}`);
+                }
+                
+                const answer = await response.json();
+                
+                if (answer.error) {
+                    throw new Error(answer.error);
+                }
+                
+                if (!answer.sdp) {
+                    throw new Error('SDP отсутствует в ответе');
+                }
+                
+                // Устанавливаем удаленное описание
+                await peerConnection.setRemoteDescription(new RTCSessionDescription({
+                    type: 'answer',
+                    sdp: answer.sdp
+                }));
+                
+                // Добавляем видео в контейнер
+                videoContainer.innerHTML = '';
+                videoContainer.appendChild(videoElement);
+                
+                // Добавляем информацию о камере
+                const cameraInfo = document.createElement('div');
+                cameraInfo.className = 'camera-info';
+                cameraInfo.textContent = `Камера ${channelId}`;
+                videoContainer.appendChild(cameraInfo);
+                
+                // Добавляем статус
+                const statusElement = document.createElement('div');
+                statusElement.className = 'status';
+                statusElement.textContent = 'Подключение...';
+                videoContainer.appendChild(statusElement);
+                
+                // Клик для запуска видео на мобильных
+                videoContainer.addEventListener('click', () => {
+                    if (videoElement && videoElement.paused) {
+                        videoElement.play().catch(e => console.log('Ошибка при клике:', e));
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Ошибка:', error);
+                videoContainer.innerHTML = `<div class="loading">Ошибка: ${error.message}</div>`;
+                connectionInfo.innerHTML = `<p class="error">Ошибка: ${error.message}</p>`;
+            }
+        }
+        
+        // Обновление статуса на видео
+        function updateStatus(state) {
+            let statusElement = videoContainer.querySelector('.status');
+            
+            if (!statusElement) {
+                statusElement = document.createElement('div');
+                statusElement.className = 'status';
+                videoContainer.appendChild(statusElement);
+            }
+            
+            let statusText = '';
+            let statusColor = '';
+            
+            switch (state) {
+                case 'new':
+                case 'checking':
+                    statusText = 'Подключение...';
+                    statusColor = 'rgba(241, 196, 15, 0.8)';
+                    break;
+                case 'connected':
+                case 'completed':
+                    statusText = 'Подключено';
+                    statusColor = 'rgba(46, 204, 113, 0.8)';
+                    break;
+                case 'disconnected':
+                    statusText = 'Переподключение...';
+                    statusColor = 'rgba(230, 126, 34, 0.8)';
+                    break;
+                case 'failed':
+                    statusText = 'Ошибка соединения';
+                    statusColor = 'rgba(231, 76, 60, 0.8)';
+                    break;
+                default:
+                    statusText = state;
+                    statusColor = 'rgba(0, 0, 0, 0.8)';
+            }
+            
+            statusElement.textContent = statusText;
+            statusElement.style.background = statusColor;
+        }
+        
+        // Обработчики кнопок
+        connectBtn.addEventListener('click', connect);
+        reloadBtn.addEventListener('click', connect);
+        
+        // Сохранение выбранной камеры
+        cameraSelect.addEventListener('change', () => {
+            localStorage.setItem('lastCamera', cameraSelect.value);
+        });
+        
+        // Автоматическое подключение при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            // Восстанавливаем последнюю выбранную камеру
+            const lastCamera = localStorage.getItem('lastCamera');
+            if (lastCamera && cameraSelect.querySelector(`option[value="${lastCamera}"]`)) {
+                cameraSelect.value = lastCamera;
+            }
+            
+            // Проверяем URL параметры для автоподключения
+            const urlParams = new URLSearchParams(window.location.search);
+            const autoChannel = urlParams.get('channel');
+            if (autoChannel && cameraSelect.querySelector(`option[value="${autoChannel}"]`)) {
+                cameraSelect.value = autoChannel;
+            }
+            
+            // Автоматически подключаемся
+            setTimeout(connect, 500);
+        });
+    </script>
+</body>
+</html> 

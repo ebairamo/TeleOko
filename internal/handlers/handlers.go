@@ -9,8 +9,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -18,10 +20,43 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// GetGo2rtcUrl возвращает текущий URL для go2rtc
+func GetGo2rtcUrl(c *gin.Context) {
+	// Получаем URL из переменной окружения или файла
+	go2rtcURL := os.Getenv("GO2RTC_URL")
+
+	// Если переменная окружения не установлена, пытаемся прочитать из файла
+	if go2rtcURL == "" {
+		if data, err := ioutil.ReadFile("go2rtc_url.txt"); err == nil {
+			go2rtcURL = strings.TrimSpace(string(data))
+		}
+	}
+
+	// Устанавливаем заголовки CORS для доступа с любого домена
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("Access-Control-Allow-Methods", "GET, OPTIONS")
+	c.Header("Access-Control-Allow-Headers", "Origin, Content-Type")
+
+	// Возвращаем URL в формате JSON
+	c.JSON(http.StatusOK, gin.H{
+		"url": go2rtcURL,
+	})
+}
+
 // GetSystemInfo возвращает информацию о системе
 func GetSystemInfo(c *gin.Context) {
 	channels := config.GetChannels()
 	localIP, _ := network.GetLocalIP()
+
+	// Получаем URL go2rtc из переменной окружения
+	go2rtcURL := os.Getenv("GO2RTC_URL")
+
+	// Если переменная окружения не установлена, пытаемся прочитать из файла
+	if go2rtcURL == "" {
+		if data, err := ioutil.ReadFile("go2rtc_url.txt"); err == nil {
+			go2rtcURL = strings.TrimSpace(string(data))
+		}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":         "online",
@@ -29,6 +64,7 @@ func GetSystemInfo(c *gin.Context) {
 		"channels_count": len(channels),
 		"go2rtc_enabled": config.IsGo2RTCEnabled(),
 		"go2rtc_port":    config.GetGo2RTCPort(),
+		"go2rtc_url":     go2rtcURL, // Добавляем URL для go2rtc
 		"local_ip":       localIP,
 		"timestamp":      time.Now().Unix(),
 	})
