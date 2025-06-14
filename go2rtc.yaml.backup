@@ -1,42 +1,60 @@
+# Универсальная конфигурация go2rtc для работы через любые сети
 streams:
-  1: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1
-  101: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/101
-  102: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/102
-  201: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/201
-  202: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/202
-  301: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/301
-  302: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/302
-  401: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/401
-  402: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/402
-  501: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/501
-  502: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/502
-  601: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/601
-  602: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/602
-  701: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/701
-  702: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/702
-  801: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/801
-  802: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/802
-  901: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/901
-  902: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/902
-  1001: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1001
-  1002: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1002
-  1101: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1101
-  1102: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1102
-  1201: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1201
-  1202: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1202
-  1301: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1301
-  1302: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1302
-  1401: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1401
-  1402: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1402
-  1501: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1501
-  1502: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1502
-  1601: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1601
-  1602: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1602
+  # Общий канал
+  1: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1
+  # Стандартные каналы
+  102: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/102
+  202: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/202
+  302: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/302
+  402: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/402
+  502: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/502
+  602: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/602
+  702: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/702
+  802: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/802
+  902: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/902
+  1002: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1002
+  1102: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1102
+  1202: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1202
+  1302: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1302
+  1402: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1402
+  1502: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1502
+  1602: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1602
 
-webrtc:
-  listen: :1984
-  candidates:
-    - stun:stun.l.google.com:19302
-
+# API настройки - разрешаем доступ с любых доменов
 api:
   listen: :1984
+  origin: "*"
+  cors: true
+
+# WebRTC настройки для универсальной работы
+webrtc:
+  listen: :1984
+  
+  # Настройки для работы через любые сети
+  tcp: true
+  drop_late: true
+  
+  # Активируем все типы кандидатов
+  candidates:
+    - stun:stun.l.google.com:19302
+    - stun:stun1.l.google.com:19302
+    - stun:stun.stunprotocol.org:3478
+    
+  # ICE серверы для всех типов сетей  
+  ice_servers:
+    # STUN серверы
+    - urls:
+      - stun:stun.l.google.com:19302
+      - stun:stun1.l.google.com:19302
+      - stun:stun2.l.google.com:19302
+      - stun:stun3.l.google.com:19302
+      - stun:stun4.l.google.com:19302
+      
+    # TURN серверы через TCP и UDP
+    - urls:
+      - turn:openrelay.metered.ca:80?transport=tcp
+      - turn:openrelay.metered.ca:443?transport=tcp
+      - turn:openrelay.metered.ca:80
+      - turn:openrelay.metered.ca:443
+      username: openrelayproject
+      credential: openrelayproject

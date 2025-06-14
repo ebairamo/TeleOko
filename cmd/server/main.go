@@ -11,15 +11,14 @@ import (
 	"time"
 
 	"TeleOko/internal/config"
-	"TeleOko/internal/go2rtc"
 	"TeleOko/internal/handlers"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	log.Println("🚀 Запуск TeleOko v2.0 - Система видеонаблюдения")
-	log.Println("================================================")
+	log.Println("🚀 Запуск TeleOko v2.0 HLS - Система видеонаблюдения")
+	log.Println("==================================================")
 
 	// Загрузка конфигурации
 	cfg, err := config.Load()
@@ -27,6 +26,9 @@ func main() {
 		log.Fatalf("❌ Ошибка загрузки конфигурации: %v", err)
 	}
 	log.Println("✅ Конфигурация загружена")
+
+	// Инициализация HLS менеджера
+	handlers.InitStreamManager("web/static/streams")
 
 	// Получение IP-адреса сервера
 	ip, err := getLocalIP()
@@ -36,28 +38,13 @@ func main() {
 	}
 	log.Printf("🌐 IP-адрес сервера: %s", ip)
 
-	// Запуск go2rtc если включен
-	var go2rtcManager *go2rtc.Manager
-	if config.IsGo2RTCEnabled() {
-		log.Println("🎥 Инициализация go2rtc...")
-		go2rtcManager = go2rtc.NewManager()
-
-		if err := go2rtcManager.Start(); err != nil {
-			log.Printf("⚠️ Ошибка запуска go2rtc: %v", err)
-			log.Println("📝 go2rtc будет отключен, система будет работать только с RTSP")
-		} else {
-			log.Println("✅ go2rtc успешно запущен")
-			time.Sleep(3 * time.Second)
-		}
-	}
-
 	// Настройка Gin
 	if os.Getenv("GIN_MODE") != "debug" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	r := gin.Default()
 
-	// Настройка CORS для WebRTC
+	// Настройка CORS
 	r.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
@@ -94,31 +81,30 @@ func main() {
 			c.JSON(http.StatusOK, gin.H{"status": "ok", "timestamp": time.Now().Unix()})
 		})
 
-		api.GET("/go2rtc-url", handlers.GetGo2rtcUrl)
 		// Работа с каналами
 		api.GET("/channels", handlers.GetChannels)
 
 		// Прямой эфир
 		api.GET("/stream/:channel", handlers.GetLiveStream)
-		api.POST("/webrtc/offer", handlers.HandleWebRTCOffer)
+
+		// Управление HLS потоками
+		api.POST("/stream/:channel/stop", handlers.StopStream)
+		api.GET("/streams/active", handlers.GetActiveStreams)
 
 		// Архивные записи
 		api.GET("/recordings", handlers.GetRecordings)
 		api.GET("/playback-url", handlers.GetPlaybackURL)
-		api.POST("/webrtc/offer/playback", handlers.HandlePlaybackWebRTC)
 
 		// Снимки
 		api.GET("/snapshot/:channel", handlers.GetSnapshot)
 
 		// Тестирование подключения к камере
 		api.GET("/test-connection", handlers.TestCameraConnection)
-
-		// Проксирование запросов к go2rtc
-		if go2rtcManager != nil && go2rtcManager.IsRunning() {
-			api.Any("/go2rtc/*path", handlers.ProxyToGo2RTC)
-		}
-
 	}
+
+	// Обслуживание HLS файлов
+	r.GET("/streams/:filename", handlers.ServeHLSPlaylist)
+	r.OPTIONS("/streams/:filename", handlers.HandleOptions)
 
 	// Обработка сигналов завершения
 	c := make(chan os.Signal, 1)
@@ -127,13 +113,8 @@ func main() {
 		<-c
 		log.Println("\n🛑 Получен сигнал завершения...")
 
-		// Остановка go2rtc
-		if go2rtcManager != nil {
-			log.Println("⏹️ Остановка go2rtc...")
-			if err := go2rtcManager.Stop(); err != nil {
-				log.Printf("⚠️ Ошибка остановки go2rtc: %v", err)
-			}
-		}
+		// Остановка HLS потоков
+		handlers.Cleanup()
 
 		log.Println("👋 TeleOko завершен")
 		os.Exit(0)
@@ -141,14 +122,14 @@ func main() {
 
 	// Отображение информации о запуске
 	log.Println()
-	log.Println("🎉 TeleOko v2.0 готов к работе!")
-	log.Println("================================")
+	log.Println("🎉 TeleOko v2.0 HLS готов к работе!")
+	log.Println("====================================")
 	log.Printf("🌍 Веб-интерфейс:    http://localhost:%d", cfg.Server.Port)
 	log.Printf("🌐 По сети:          http://%s:%d", ip, cfg.Server.Port)
 	log.Printf("📺 Каналов:          %d", len(config.GetChannels()))
-	if config.IsGo2RTCEnabled() {
-		log.Printf("🎥 go2rtc:           http://localhost:%d", config.GetGo2RTCPort())
-	}
+	log.Printf("🎬 Режим стриминга:  HLS (работает на всех устройствах)")
+	log.Println()
+	log.Println("⚠️  Убедитесь, что FFmpeg установлен!")
 	log.Println()
 
 	// Запуск веб-сервера

@@ -87,7 +87,7 @@ create_default_config() {
         "port": 8082
     },
     "hikvision": {
-        "ip": "192.168.8.10",
+        "ip": "192.168.8.22",
         "username": "admin",
         "password": "oborotni2447",
         "port": 554
@@ -105,87 +105,87 @@ create_default_config() {
         {
             "id": "1",
             "name": "🎥 Общий план",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1"
         },
         {
             "id": "102",
             "name": "📹 Камера 1",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/102"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/102"
         },
         {
             "id": "202",
             "name": "📹 Камера 2",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/202"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/202"
         },
         {
             "id": "302",
             "name": "📹 Камера 3",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/302"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/302"
         },
         {
             "id": "402",
             "name": "📹 Камера 4",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/402"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/402"
         },
         {
             "id": "502",
             "name": "📹 Камера 5",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/502"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/502"
         },
         {
             "id": "602",
             "name": "📹 Камера 6",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/602"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/602"
         },
         {
             "id": "702",
             "name": "📹 Камера 7",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/702"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/702"
         },
         {
             "id": "802",
             "name": "📹 Камера 8",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/802"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/802"
         },
         {
             "id": "902",
             "name": "📹 Камера 9",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/902"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/902"
         },
         {
             "id": "1002",
             "name": "📹 Камера 10",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1002"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1002"
         },
         {
             "id": "1102",
             "name": "📹 Камера 11",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1102"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1102"
         },
         {
             "id": "1202",
             "name": "📹 Камера 12",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1202"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1202"
         },
         {
             "id": "1302",
             "name": "📹 Камера 13",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1302"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1302"
         },
         {
             "id": "1402",
             "name": "📹 Камера 14",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1402"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1402"
         },
         {
             "id": "1502",
             "name": "📹 Камера 15",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1502"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1502"
         },
         {
             "id": "1602",
             "name": "📹 Камера 16",
-            "url": "rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1602"
+            "url": "rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1602"
         }
     ]
 }
@@ -205,24 +205,24 @@ update_go2rtc_config() {
 # Универсальная конфигурация go2rtc для работы через любые сети
 streams:
   # Общий канал
-  1: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1
+  1: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1
   # Стандартные каналы
-  102: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/102
-  202: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/202
-  302: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/302
-  402: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/402
-  502: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/502
-  602: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/602
-  702: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/702
-  802: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/802
-  902: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/902
-  1002: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1002
-  1102: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1102
-  1202: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1202
-  1302: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1302
-  1402: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1402
-  1502: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1502
-  1602: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1602
+  102: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/102
+  202: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/202
+  302: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/302
+  402: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/402
+  502: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/502
+  602: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/602
+  702: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/702
+  802: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/802
+  902: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/902
+  1002: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1002
+  1102: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1102
+  1202: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1202
+  1302: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1302
+  1402: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1402
+  1502: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1502
+  1602: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1602
 
 # API настройки - разрешаем доступ с любых доменов
 api:
@@ -305,9 +305,9 @@ test_camera_connection() {
     
     # Читаем IP из конфигурации
     if command -v jq &> /dev/null; then
-        CAMERA_IP=$(jq -r '.hikvision.ip' config.json 2>/dev/null || echo "192.168.8.10")
+        CAMERA_IP=$(jq -r '.hikvision.ip' config.json 2>/dev/null || echo "192.168.8.22")
     else
-        CAMERA_IP="192.168.8.10"  # По умолчанию
+        CAMERA_IP="192.168.8.22"  # По умолчанию
     fi
     
     if ping -c 1 -W 3 "$CAMERA_IP" &> /dev/null; then

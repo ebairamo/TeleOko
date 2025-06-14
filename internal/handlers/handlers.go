@@ -3,44 +3,25 @@ package handlers
 import (
 	"TeleOko/internal/config"
 	"TeleOko/internal/hikvision"
+	"TeleOko/internal/hls"
 	"TeleOko/internal/network"
-	"bytes"
-	"crypto/tls"
-	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
+	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-// GetGo2rtcUrl возвращает текущий URL для go2rtc
-func GetGo2rtcUrl(c *gin.Context) {
-	// Получаем URL из переменной окружения или файла
-	go2rtcURL := os.Getenv("GO2RTC_URL")
+// Глобальный менеджер потоков
+var streamManager *hls.StreamManager
 
-	// Если переменная окружения не установлена, пытаемся прочитать из файла
-	if go2rtcURL == "" {
-		if data, err := ioutil.ReadFile("go2rtc_url.txt"); err == nil {
-			go2rtcURL = strings.TrimSpace(string(data))
-		}
-	}
-
-	// Устанавливаем заголовки CORS для доступа с любого домена
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Methods", "GET, OPTIONS")
-	c.Header("Access-Control-Allow-Headers", "Origin, Content-Type")
-
-	// Возвращаем URL в формате JSON
-	c.JSON(http.StatusOK, gin.H{
-		"url": go2rtcURL,
-	})
+// InitStreamManager инициализирует менеджер HLS потоков
+func InitStreamManager(outputDir string) {
+	streamManager = hls.NewStreamManager(outputDir)
+	log.Printf("✅ HLS менеджер инициализирован, директория: %s", outputDir)
 }
 
 // GetSystemInfo возвращает информацию о системе
@@ -48,23 +29,17 @@ func GetSystemInfo(c *gin.Context) {
 	channels := config.GetChannels()
 	localIP, _ := network.GetLocalIP()
 
-	// Получаем URL go2rtc из переменной окружения
-	go2rtcURL := os.Getenv("GO2RTC_URL")
-
-	// Если переменная окружения не установлена, пытаемся прочитать из файла
-	if go2rtcURL == "" {
-		if data, err := ioutil.ReadFile("go2rtc_url.txt"); err == nil {
-			go2rtcURL = strings.TrimSpace(string(data))
-		}
+	activeStreams := 0
+	if streamManager != nil {
+		activeStreams = len(streamManager.GetActiveStreams())
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":         "online",
-		"version":        "2.0.0",
+		"version":        "2.0.0-HLS",
 		"channels_count": len(channels),
-		"go2rtc_enabled": config.IsGo2RTCEnabled(),
-		"go2rtc_port":    config.GetGo2RTCPort(),
-		"go2rtc_url":     go2rtcURL, // Добавляем URL для go2rtc
+		"streaming_type": "HLS",
+		"active_streams": activeStreams,
 		"local_ip":       localIP,
 		"timestamp":      time.Now().Unix(),
 	})
@@ -76,13 +51,35 @@ func GetChannels(c *gin.Context) {
 
 	log.Printf("📺 Запрос списка каналов - всего доступно: %d каналов", len(channels))
 
+	// Добавляем информацию об активных потоках
+	channelList := make([]gin.H, 0, len(channels))
+	for _, channel := range channels {
+		channelInfo := gin.H{
+			"id":   channel.ID,
+			"name": channel.Name,
+			"url":  channel.URL,
+		}
+
+		// Проверяем, активен ли поток
+		if streamManager != nil {
+			if stream, exists := streamManager.GetStream(channel.ID); exists && stream.Active {
+				channelInfo["streaming"] = true
+				channelInfo["stream_url"] = stream.PlaylistURL
+			} else {
+				channelInfo["streaming"] = false
+			}
+		}
+
+		channelList = append(channelList, channelInfo)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"channels": channels,
+		"channels": channelList,
 		"count":    len(channels),
 	})
 }
 
-// GetLiveStream обрабатывает запрос на получение прямого эфира
+// GetLiveStream запускает HLS поток для канала
 func GetLiveStream(c *gin.Context) {
 	channelID := c.Param("channel")
 	if channelID == "" {
@@ -98,132 +95,95 @@ func GetLiveStream(c *gin.Context) {
 
 	log.Printf("🔴 ПРЯМОЙ ЭФИР - Запрос канала %s (%s)", channelID, channel.Name)
 
-	if config.IsGo2RTCEnabled() {
-		// Возвращаем информацию для WebRTC
-		c.JSON(http.StatusOK, gin.H{
-			"channel":      channelID,
-			"channel_name": channel.Name,
-			"type":         "webrtc",
-			"rtsp_url":     channel.URL,
-		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"channel":      channelID,
-			"channel_name": channel.Name,
-			"rtsp_url":     channel.URL,
-			"type":         "rtsp",
-		})
+	if streamManager == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Менеджер потоков не инициализирован"})
+		return
 	}
+
+	// Проверяем, запущен ли уже поток
+	stream, exists := streamManager.GetStream(channelID)
+	if exists && stream.Active {
+		log.Printf("📺 Используем существующий поток для канала %s", channelID)
+		c.JSON(http.StatusOK, gin.H{
+			"channel":      channelID,
+			"channel_name": channel.Name,
+			"type":         "hls",
+			"stream_url":   stream.PlaylistURL,
+			"status":       "active",
+		})
+		return
+	}
+
+	// Запускаем новый поток
+	stream, err := streamManager.StartStream(channelID, channel.URL)
+	if err != nil {
+		log.Printf("❌ Ошибка запуска потока: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("Не удалось запустить поток: %v", err),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"channel":      channelID,
+		"channel_name": channel.Name,
+		"type":         "hls",
+		"stream_url":   stream.PlaylistURL,
+		"status":       "starting",
+		"message":      "Поток запускается, подождите несколько секунд",
+	})
 }
 
-// HandleWebRTCOffer обрабатывает WebRTC offer и проксирует его к go2rtc
-// HandleWebRTCOffer обрабатывает WebRTC offer и проксирует его к go2rtc
-func HandleWebRTCOffer(c *gin.Context) {
-	channelID := c.Query("channel")
+// StopStream останавливает HLS поток
+func StopStream(c *gin.Context) {
+	channelID := c.Param("channel")
 	if channelID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Канал не указан"})
 		return
 	}
 
-	if !config.IsGo2RTCEnabled() {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "WebRTC сервис недоступен"})
+	if streamManager == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Менеджер потоков не инициализирован"})
 		return
 	}
 
-	// Читаем offer от клиента
-	var offer map[string]interface{}
-	if err := c.ShouldBindJSON(&offer); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат данных"})
-		return
-	}
-
-	// Добавляем подробные логи
-	log.Printf("🎯 WebRTC OFFER для канала %s", channelID)
-
-	// Создаем URL для go2rtc API
-	go2rtcURL := fmt.Sprintf("http://localhost:%d/api/webrtc?src=%s", config.GetGo2RTCPort(), channelID)
-	log.Printf("🔄 Отправка запроса к go2rtc: %s", go2rtcURL)
-
-	// Отправляем offer к go2rtc
-	jsonData, err := json.Marshal(offer)
+	err := streamManager.StopStream(channelID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка обработки данных"})
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Создаем HTTP-клиент с настройками для работы через ngrok
-	client := &http.Client{
-		Transport: &http.Transport{
-			// Устанавливаем таймауты для работы через ngrok
-			ResponseHeaderTimeout: 30 * time.Second,
-			ExpectContinueTimeout: 30 * time.Second,
-			// Отключаем проверку SSL для случаев, когда ngrok использует самоподписанные сертификаты
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-		Timeout: 60 * time.Second, // Увеличиваем общий таймаут
-	}
+	log.Printf("⏹️ Поток остановлен для канала %s", channelID)
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "stopped",
+		"channel": channelID,
+	})
+}
 
-	req, err := http.NewRequest("POST", go2rtcURL, bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Printf("❌ Ошибка создания запроса: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка создания запроса к go2rtc"})
+// GetActiveStreams возвращает список активных потоков
+func GetActiveStreams(c *gin.Context) {
+	if streamManager == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Менеджер потоков не инициализирован"})
 		return
 	}
 
-	req.Header.Set("Content-Type", "application/json")
+	streams := streamManager.GetActiveStreams()
+	streamList := make([]gin.H, 0, len(streams))
 
-	// Добавляем заголовки для работы через прокси
-	if origin := c.GetHeader("Origin"); origin != "" {
-		req.Header.Set("Origin", origin)
+	for _, stream := range streams {
+		streamList = append(streamList, gin.H{
+			"channel_id": stream.ChannelID,
+			"stream_url": stream.PlaylistURL,
+			"active":     stream.Active,
+			"start_time": stream.StartTime.Format(time.RFC3339),
+			"duration":   time.Since(stream.StartTime).Seconds(),
+		})
 	}
 
-	log.Printf("📤 Отправка запроса к go2rtc...")
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Printf("❌ Ошибка отправки к go2rtc: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка подключения к go2rtc"})
-		return
-	}
-	defer resp.Body.Close()
-
-	log.Printf("📥 Получен ответ от go2rtc: %s", resp.Status)
-
-	// Читаем ответ от go2rtc
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("❌ Ошибка чтения ответа: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка чтения ответа"})
-		return
-	}
-
-	// Проверяем, не является ли ответ ошибкой
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("❌ go2rtc вернул ошибку: %s", string(body))
-		c.JSON(resp.StatusCode, gin.H{"error": "Ошибка go2rtc", "details": string(body)})
-		return
-	}
-
-	var answer map[string]interface{}
-	if err := json.Unmarshal(body, &answer); err != nil {
-		log.Printf("❌ Ошибка парсинга ответа: %v", err)
-		log.Printf("📄 Тело ответа: %s", string(body))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка парсинга ответа"})
-		return
-	}
-
-	// Проверяем наличие ошибки в ответе
-	if errMsg, exists := answer["error"]; exists {
-		log.Printf("❌ go2rtc вернул ошибку: %v", errMsg)
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("go2rtc error: %v", errMsg)})
-		return
-	}
-
-	log.Printf("✅ WebRTC answer получен для канала %s", channelID)
-
-	// Возвращаем answer клиенту
-	c.JSON(http.StatusOK, answer)
+	c.JSON(http.StatusOK, gin.H{
+		"streams": streamList,
+		"count":   len(streamList),
+	})
 }
 
 // GetRecordings получает список архивных записей
@@ -302,32 +262,8 @@ func GetPlaybackURL(c *gin.Context) {
 		"start_time": startTime,
 		"end_time":   endTime,
 		"type":       "rtsp",
+		"note":       "Используйте VLC для просмотра RTSP потока",
 	})
-}
-
-// HandlePlaybackWebRTC обрабатывает WebRTC для воспроизведения архива
-func HandlePlaybackWebRTC(c *gin.Context) {
-	var requestData struct {
-		Offer map[string]interface{} `json:"offer"`
-		URL   string                 `json:"url"`
-	}
-
-	if err := c.ShouldBindJSON(&requestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат данных"})
-		return
-	}
-
-	log.Printf("🎯 WebRTC PLAYBACK запрос")
-
-	if config.IsGo2RTCEnabled() {
-		c.JSON(http.StatusOK, gin.H{
-			"error": "Воспроизведение архива через WebRTC пока не поддерживается",
-		})
-	} else {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": "WebRTC сервис недоступен",
-		})
-	}
 }
 
 // GetSnapshot получает снимок с камеры
@@ -370,59 +306,54 @@ func TestCameraConnection(c *gin.Context) {
 	})
 }
 
-// ProxyToGo2RTC проксирует запросы к go2rtc
-func ProxyToGo2RTC(c *gin.Context) {
-	// Получаем путь запроса, убирая префикс "/api/go2rtc"
-	path := strings.TrimPrefix(c.Request.URL.Path, "/api/go2rtc")
-
-	// Создаем URL для go2rtc
-	targetURL := fmt.Sprintf("http://localhost:%d%s", config.GetGo2RTCPort(), path)
-	if c.Request.URL.RawQuery != "" {
-		targetURL += "?" + c.Request.URL.RawQuery
-	}
-
-	// Создаем новый запрос
-	var body io.Reader
-	if c.Request.Body != nil {
-		bodyBytes, _ := io.ReadAll(c.Request.Body)
-		c.Request.Body.Close()
-		body = bytes.NewBuffer(bodyBytes)
-	}
-
-	req, err := http.NewRequest(c.Request.Method, targetURL, body)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка создания запроса"})
+// ServeHLSPlaylist обслуживает HLS плейлисты
+func ServeHLSPlaylist(c *gin.Context) {
+	filename := c.Param("filename")
+	if filename == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Файл не указан"})
 		return
 	}
 
-	// Копируем заголовки
-	for key, values := range c.Request.Header {
-		for _, value := range values {
-			req.Header.Add(key, value)
-		}
-	}
+	// Путь к файлу
+	filePath := filepath.Join("web/static/streams", filename)
 
-	// Устанавливаем правильный Content-Type для WebRTC
-	if strings.Contains(path, "/webrtc") {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	// Выполняем запрос
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка выполнения запроса"})
+	// Проверяем существование файла
+	if _, err := filepath.Abs(filePath); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Файл не найден"})
 		return
 	}
-	defer resp.Body.Close()
 
-	// Копируем ответ
-	for key, values := range resp.Header {
-		for _, value := range values {
-			c.Header(key, value)
-		}
+	// Устанавливаем правильные заголовки для HLS
+	if filepath.Ext(filename) == ".m3u8" {
+		c.Header("Content-Type", "application/vnd.apple.mpegurl")
+		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+	} else if filepath.Ext(filename) == ".ts" {
+		c.Header("Content-Type", "video/mp2t")
+		c.Header("Cache-Control", "max-age=3600")
 	}
 
-	c.Status(resp.StatusCode)
-	io.Copy(c.Writer, resp.Body)
+	// CORS для HLS
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("Access-Control-Allow-Methods", "GET, OPTIONS")
+	c.Header("Access-Control-Allow-Headers", "Origin, Content-Type")
+
+	// Отдаем файл
+	c.File(filePath)
+}
+
+// HandleOptions обрабатывает preflight запросы
+func HandleOptions(c *gin.Context) {
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	c.Header("Access-Control-Max-Age", "86400")
+	c.Status(http.StatusNoContent)
+}
+
+// Cleanup очищает ресурсы при завершении
+func Cleanup() {
+	if streamManager != nil {
+		log.Println("🧹 Остановка всех HLS потоков...")
+		streamManager.StopAll()
+	}
 }

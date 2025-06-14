@@ -1,24 +1,24 @@
 # Универсальная конфигурация go2rtc для работы через любые сети
 streams:
   # Общий канал
-  1: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1
+  1: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1
   # Стандартные каналы
-  102: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/102
-  202: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/202
-  302: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/302
-  402: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/402
-  502: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/502
-  602: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/602
-  702: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/702
-  802: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/802
-  902: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/902
-  1002: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1002
-  1102: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1102
-  1202: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1202
-  1302: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1302
-  1402: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1402
-  1502: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1502
-  1602: rtsp://admin:oborotni2447@192.168.8.10:554/Streaming/Channels/1602
+  102: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/102
+  202: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/202
+  302: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/302
+  402: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/402
+  502: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/502
+  602: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/602
+  702: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/702
+  802: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/802
+  902: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/902
+  1002: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1002
+  1102: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1102
+  1202: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1202
+  1302: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1302
+  1402: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1402
+  1502: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1502
+  1602: rtsp://admin:oborotni2447@192.168.8.22:554/Streaming/Channels/1602
 
 # API настройки - разрешаем доступ с любых доменов
 api:

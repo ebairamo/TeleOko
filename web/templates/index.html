@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TeleOko v2.0 - Система видеонаблюдения</title>
+    <title>TeleOko v2.0 HLS - Система видеонаблюдения</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📹</text></svg>">
     <style>
@@ -222,20 +222,25 @@
     <footer>
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             <div>
-                <p>&copy; 2025 TeleOko v2.0 - Система видеонаблюдения</p>
-                <p style="font-size: 12px; opacity: 0.8;">Полностью переработанная версия с WebRTC поддержкой</p>
+                <p>&copy; 2025 TeleOko v2.0 HLS - Система видеонаблюдения</p>
+<p style="font-size: 12px; opacity: 0.8;">Версия с HLS поддержкой для всех устройств</p>
             </div>
             <div style="text-align: right;">
                 <p style="font-size: 12px;">🎯 Функции:</p>
                 <p style="font-size: 11px; opacity: 0.8;">
-                    ✅ WebRTC стрим • ✅ Поиск архива • ✅ Снимки • ✅ Мобильная версия
+                    ✅ HLS стрим • ✅ Все устройства • ✅ Поиск архива • ✅ Снимки
                 </p>
             </div>
         </div>
     </footer>
 
+    <!-- HLS.js для воспроизведения HLS потоков -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
     <!-- Скрипты -->
     <script src="/static/js/main.js"></script>
+    <script src="/static/js/main.js"></script>
+<script src="/static/js/webrtc-client.js"></script>
     
     <script>
         // Дополнительная инициализация для отображения системной информации
